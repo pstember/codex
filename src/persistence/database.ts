@@ -1,5 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import type { AuthStore } from "@/domain/auth";
+import type { MetricsTrace } from "@/domain/metricsTrace";
 import type { Product } from "@/domain/product";
 import type { AuthenticatedUser, User } from "@/domain/users";
 
@@ -9,6 +10,8 @@ export interface CommerceDatabase extends AuthStore {
   seedUsers(users: User[]): void;
   countProducts(): number;
   countUsers(): number;
+  saveMetricsTrace(trace: MetricsTrace): void;
+  listRecentMetricsTraces(limit?: number): MetricsTrace[];
 }
 
 export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
@@ -38,6 +41,17 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL REFERENCES users(id),
       expires_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS metrics_traces (
+      id TEXT PRIMARY KEY,
+      question TEXT NOT NULL,
+      operation_name TEXT NOT NULL,
+      validation_status TEXT NOT NULL,
+      chart_type TEXT NOT NULL,
+      recommended_product_ids_json TEXT NOT NULL,
+      created_by_user_id TEXT NOT NULL,
+      created_at TEXT NOT NULL
     );
   `);
 
@@ -98,6 +112,43 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
 
   const deleteSessionStatement = database.prepare(`
     DELETE FROM sessions WHERE id = ?;
+  `);
+
+  const insertMetricsTrace = database.prepare(`
+    INSERT INTO metrics_traces (
+      id,
+      question,
+      operation_name,
+      validation_status,
+      chart_type,
+      recommended_product_ids_json,
+      created_by_user_id,
+      created_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      question = excluded.question,
+      operation_name = excluded.operation_name,
+      validation_status = excluded.validation_status,
+      chart_type = excluded.chart_type,
+      recommended_product_ids_json = excluded.recommended_product_ids_json,
+      created_by_user_id = excluded.created_by_user_id,
+      created_at = excluded.created_at;
+  `);
+
+  const listMetricsTraces = database.prepare(`
+    SELECT
+      id,
+      question,
+      operation_name AS operationName,
+      validation_status AS validationStatus,
+      chart_type AS chartType,
+      recommended_product_ids_json AS recommendedProductIdsJson,
+      created_by_user_id AS createdByUserId,
+      created_at AS createdAt
+    FROM metrics_traces
+    ORDER BY created_at DESC
+    LIMIT ?;
   `);
 
   return {
@@ -186,6 +237,41 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
     },
     deleteSession(sessionId) {
       deleteSessionStatement.run(sessionId);
+    },
+    saveMetricsTrace(trace) {
+      insertMetricsTrace.run(
+        trace.id,
+        trace.question,
+        trace.operationName,
+        trace.validationStatus,
+        trace.chartType,
+        JSON.stringify(trace.recommendedProductIds),
+        trace.createdByUserId,
+        trace.createdAt.toISOString(),
+      );
+    },
+    listRecentMetricsTraces(limit = 5) {
+      const rows = listMetricsTraces.all(limit) as Array<{
+        id: string;
+        question: string;
+        operationName: string;
+        validationStatus: MetricsTrace["validationStatus"];
+        chartType: MetricsTrace["chartType"];
+        recommendedProductIdsJson: string;
+        createdByUserId: string;
+        createdAt: string;
+      }>;
+
+      return rows.map((row) => ({
+        id: row.id,
+        question: row.question,
+        operationName: row.operationName,
+        validationStatus: row.validationStatus,
+        chartType: row.chartType,
+        recommendedProductIds: JSON.parse(row.recommendedProductIdsJson) as string[],
+        createdByUserId: row.createdByUserId,
+        createdAt: new Date(row.createdAt),
+      }));
     },
   };
 }

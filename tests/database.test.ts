@@ -46,4 +46,36 @@ describe("commerce SQLite database", () => {
       database.close();
     }
   });
+
+  it("persists and lists recent Metrics Copilot traces", () => {
+    const database = createCommerceDatabase();
+
+    try {
+      database.saveMetricsTrace({
+        id: "trace-1",
+        question: "What should we promote for Father’s Day?",
+        operationName: "FatherDayPromotionCandidates",
+        validationStatus: "valid",
+        chartType: "productTable",
+        recommendedProductIds: ["portable-charcoal-grill"],
+        createdByUserId: "demo-manager",
+        createdAt: new Date("2026-05-22T10:00:00.000Z"),
+      });
+
+      expect(database.listRecentMetricsTraces()).toEqual([
+        {
+          id: "trace-1",
+          question: "What should we promote for Father’s Day?",
+          operationName: "FatherDayPromotionCandidates",
+          validationStatus: "valid",
+          chartType: "productTable",
+          recommendedProductIds: ["portable-charcoal-grill"],
+          createdByUserId: "demo-manager",
+          createdAt: new Date("2026-05-22T10:00:00.000Z"),
+        },
+      ]);
+    } finally {
+      database.close();
+    }
+  });
 });

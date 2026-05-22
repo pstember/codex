@@ -15,6 +15,7 @@ If the work changes product direction, architecture, constraints, or repeatable 
 - Keep solutions simple. Do not add abstractions before there is a real need.
 - Remove meaningful duplication when it improves clarity or reduces maintenance cost.
 - Preserve user work. Do not revert unrelated changes.
+- Commit completed, tested slices as you go so changes remain easy to inspect and revert.
 - Avoid storing secrets, credentials, personal tokens, or transient logs in the repo.
 
 ## Project Skills

@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Phase 1 is complete. Next phase: Phase 2, Metrics Copilot with GraphQL validation, chart mapping, saved traces, and fixture-backed Codex query generation.
+Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot with GraphQL validation, chart mapping, saved traces, and fixture-backed Codex query generation.
 
 ## Completed
 
@@ -21,15 +21,20 @@ Phase 1 is complete. Next phase: Phase 2, Metrics Copilot with GraphQL validatio
 - Added server actions for login, logout, and role-protected placeholder operations.
 - Added an in-app manual route with demo account guidance.
 - Added Phase 1 tests for login, session expiry, role authorization, user/session persistence, and SQLite-backed auth lookup.
+- Started the Metrics Copilot workflow with a server-side `answerMetricsQuestion` entry point.
+- Added fixed commerce GraphQL schema validation for generated analytics queries.
+- Rendered the Father’s Day golden question, Codex trace status, chart mapping, recommendations, and risk exclusions on the Manager page.
+- Added SQLite persistence for Metrics Copilot traces.
+- Added a Manager `Run analysis` action that saves an approved golden-query trace and refreshes the saved-runs panel.
 
 ## Test Status
 
 - `npm run typecheck`: passing.
 - `npm run lint`: passing.
-- `npm test`: passing, 7 files and 21 tests.
-- `npm run coverage`: passing, 85.84% lines and 86.11% statements.
-- `npm run build`: passing when run with permission for Next/Turbopack worker process creation.
-- Browser smoke test: passing for home login buttons, Manager route, and Guest storefront route.
+- `npm test`: passing, 8 files and 24 tests.
+- `npm run coverage`: passing, 85.18% lines and 85.61% statements.
+- `npm run build`: passing.
+- Browser smoke test: passing for Manager Metrics Copilot content and saved-run creation at `http://localhost:3000/manager`.
 
 ## Dependency Status
 
@@ -44,11 +49,12 @@ Phase 1 is complete. Next phase: Phase 2, Metrics Copilot with GraphQL validatio
 ## Known Gaps
 
 - Codex App Server is available locally through `codex app-server`, but the app adapter remains stubbed and configuration-gated for future integration.
-- UI is functional for auth/navigation but not the final mission-control experience.
+- UI is functional for auth/navigation and the first Manager Metrics Copilot slice, but not the final mission-control experience.
 - Login failure currently redirects back home without a visible inline error.
 - Phase 1 auth is demo-grade and intentionally not a production auth provider.
+- Metrics Copilot traces persist, but there is only one approved question and no saved-run detail drilldown yet.
 - Storefront remains baseline only; campaign publishing and Time Machine are future phases.
 
 ## Next Recommended Task
 
-Start Phase 2 by writing tests for the fixed commerce GraphQL schema and golden Father’s Day query validation before adding the Manager question flow.
+Continue Phase 1 by expanding the Manager question form to the remaining approved golden queries and rendering per-run trace details.

@@ -17,3 +17,21 @@ Rationale: project-local skills make the working style portable and reviewable w
 Adopt a behavioral TDD skill that combines Red-Green-Refactor with KISS and DRY.
 
 Rationale: tests should describe observable behavior, implementation should start simple, and refactoring should remove duplication once behavior is protected.
+
+## 2026-05-22 - Metrics Copilot service boundary
+
+Start Metrics Copilot as a server-side domain entry point, `answerMetricsQuestion`, that accepts a Codex harness and seeded products, validates generated GraphQL against a fixed commerce schema, and returns trace, chart, insight, and product recommendations.
+
+Rationale: keeping the workflow behind a small domain service makes it testable before adding UI input, persistence, or live Codex integrations.
+
+## 2026-05-22 - Metrics traces in SQLite
+
+Persist Metrics Copilot traces in SQLite through the same app database used for auth and products. The first Manager action only accepts approved fixture-backed questions and refreshes the Manager page after saving.
+
+Rationale: saved traces are central to the demo story, but constraining input keeps generated output deterministic and server-validated while the workflow is still early.
+
+## 2026-05-22 - Commit completed slices as checkpoints
+
+Commit completed, tested slices as work progresses instead of letting large unstaged diffs accumulate.
+
+Rationale: frequent checkpoints make it easier to inspect, bisect, or revert a specific change without discarding later useful work.
