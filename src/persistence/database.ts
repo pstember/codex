@@ -1,6 +1,7 @@
 import { createRequire } from "node:module";
 import type { AuthStore } from "@/domain/auth";
 import type { MetricsTrace } from "@/domain/metricsTrace";
+import type { CampaignProposal } from "@/domain/operatorCampaign";
 import type { Product } from "@/domain/product";
 import type { AuthenticatedUser, User } from "@/domain/users";
 
@@ -17,6 +18,9 @@ export interface CommerceDatabase extends AuthStore {
   saveMetricsTrace(trace: MetricsTrace): void;
   listRecentMetricsTraces(limit?: number): MetricsTrace[];
   findMetricsTraceById(id: string): MetricsTrace | null;
+  saveCampaignProposal(proposal: CampaignProposal): void;
+  listRecentCampaignProposals(limit?: number): CampaignProposal[];
+  findCampaignProposalById(id: string): CampaignProposal | null;
 }
 
 export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
@@ -58,6 +62,16 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
       rationale TEXT NOT NULL DEFAULT '',
       chart_type TEXT NOT NULL,
       recommended_product_ids_json TEXT NOT NULL,
+      created_by_user_id TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS campaign_proposals (
+      id TEXT PRIMARY KEY,
+      source_trace_id TEXT NOT NULL,
+      campaign_json TEXT NOT NULL,
+      validation_status TEXT NOT NULL,
+      validation_errors_json TEXT NOT NULL,
       created_by_user_id TEXT NOT NULL,
       created_at TEXT NOT NULL
     );
@@ -206,6 +220,53 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
     WHERE id = ?;
   `);
 
+  const insertCampaignProposal = database.prepare(`
+    INSERT INTO campaign_proposals (
+      id,
+      source_trace_id,
+      campaign_json,
+      validation_status,
+      validation_errors_json,
+      created_by_user_id,
+      created_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      source_trace_id = excluded.source_trace_id,
+      campaign_json = excluded.campaign_json,
+      validation_status = excluded.validation_status,
+      validation_errors_json = excluded.validation_errors_json,
+      created_by_user_id = excluded.created_by_user_id,
+      created_at = excluded.created_at;
+  `);
+
+  const listCampaignProposals = database.prepare(`
+    SELECT
+      id,
+      source_trace_id AS sourceTraceId,
+      campaign_json AS campaignJson,
+      validation_status AS validationStatus,
+      validation_errors_json AS validationErrorsJson,
+      created_by_user_id AS createdByUserId,
+      created_at AS createdAt
+    FROM campaign_proposals
+    ORDER BY created_at DESC
+    LIMIT ?;
+  `);
+
+  const findCampaignProposal = database.prepare(`
+    SELECT
+      id,
+      source_trace_id AS sourceTraceId,
+      campaign_json AS campaignJson,
+      validation_status AS validationStatus,
+      validation_errors_json AS validationErrorsJson,
+      created_by_user_id AS createdByUserId,
+      created_at AS createdAt
+    FROM campaign_proposals
+    WHERE id = ?;
+  `);
+
   function parseMetricsTraceRow(row: {
     id: string;
     question: string;
@@ -229,6 +290,26 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
       rationale: row.rationale,
       chartType: row.chartType,
       recommendedProductIds: JSON.parse(row.recommendedProductIdsJson) as string[],
+      createdByUserId: row.createdByUserId,
+      createdAt: new Date(row.createdAt),
+    };
+  }
+
+  function parseCampaignProposalRow(row: {
+    id: string;
+    sourceTraceId: string;
+    campaignJson: string;
+    validationStatus: CampaignProposal["validationStatus"];
+    validationErrorsJson: string;
+    createdByUserId: string;
+    createdAt: string;
+  }): CampaignProposal {
+    return {
+      id: row.id,
+      sourceTraceId: row.sourceTraceId,
+      campaign: JSON.parse(row.campaignJson) as CampaignProposal["campaign"],
+      validationStatus: row.validationStatus,
+      validationErrors: JSON.parse(row.validationErrorsJson) as string[],
       createdByUserId: row.createdByUserId,
       createdAt: new Date(row.createdAt),
     };
@@ -359,6 +440,31 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
         | undefined;
 
       return row ? parseMetricsTraceRow(row) : null;
+    },
+    saveCampaignProposal(proposal) {
+      insertCampaignProposal.run(
+        proposal.id,
+        proposal.sourceTraceId,
+        JSON.stringify(proposal.campaign),
+        proposal.validationStatus,
+        JSON.stringify(proposal.validationErrors),
+        proposal.createdByUserId,
+        proposal.createdAt.toISOString(),
+      );
+    },
+    listRecentCampaignProposals(limit = 5) {
+      const rows = listCampaignProposals.all(limit) as Array<
+        Parameters<typeof parseCampaignProposalRow>[0]
+      >;
+
+      return rows.map(parseCampaignProposalRow);
+    },
+    findCampaignProposalById(id) {
+      const row = findCampaignProposal.get(id) as
+        | Parameters<typeof parseCampaignProposalRow>[0]
+        | undefined;
+
+      return row ? parseCampaignProposalRow(row) : null;
     },
   };
 }

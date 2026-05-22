@@ -42,6 +42,12 @@ Persist Metrics Copilot traces in SQLite through the same app database used for 
 
 Rationale: saved traces are central to the demo story, but constraining input keeps generated output deterministic and server-validated while the workflow is still early.
 
+## 2026-05-22 - Operator proposals from saved traces
+
+Generate Operator campaign proposals from persisted Metrics Copilot traces and save the validated proposal back to SQLite for review.
+
+Rationale: this keeps the Manager and Operator roles separated while preserving a traceable handoff from insight to campaign activation.
+
 ## 2026-05-22 - Commit completed slices as checkpoints
 
 Commit completed, tested slices as work progresses instead of letting large unstaged diffs accumulate.

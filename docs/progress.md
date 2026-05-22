@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot with GraphQL validation, chart mapping, saved traces, and fixture-backed Codex query generation.
+Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot with GraphQL validation, chart mapping, saved traces, Operator handoff, and fixture-backed campaign proposal generation.
 
 ## Completed
 
@@ -34,15 +34,19 @@ Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot w
 - Installed the Playwright Chromium browser for local UI smoke verification when relevant.
 - Added Metrics Copilot Operator handoff output with campaign season, proposal prompt, selected product IDs, and risk exclusions.
 - Reworked the Manager saved-run comparison into a visual status-and-inventory view backed by a tested domain comparison model.
+- Added the first fixture-backed Operator campaign proposal flow from a saved Metrics Copilot trace.
+- Added SQLite persistence for validated Operator campaign proposals.
+- Added an Operator page handoff picker, campaign proposal generator action, and proposal review panel.
+- Added a Playwright e2e smoke for the Manager saved-run to Operator proposal path.
 
 ## Test Status
 
-- `npm run typecheck`: passing.
+- `npm run typecheck`: passing after `next build` regenerated `.next/types`.
 - `npm run lint`: passing.
-- `npm test`: passing, 8 files and 30 tests.
-- `npm run coverage`: passing, 90.04% statements, 89.63% lines, and 83.33% branches.
+- `npm test`: passing, 9 files and 33 tests.
+- `npm run coverage`: passing, 90.3% statements, 90.32% lines, and 82.6% branches.
 - `npm run build`: passing with `next build --webpack`.
-- Browser smoke test: passing for Manager login, saved-run creation, Operator handoff rendering, and visual saved-run comparison on the built app at `http://127.0.0.1:3002`.
+- Playwright e2e smoke: passing for Manager login, saved-run creation, Operator login, handoff selection, fixture-backed proposal generation, and proposal rendering.
 
 ## Dependency Status
 
@@ -62,7 +66,8 @@ Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot w
 - Phase 1 auth is demo-grade and intentionally not a production auth provider.
 - Metrics Copilot traces persist for the approved Manager metric questions, with trace detail drilldown and saved-run comparison now available.
 - Storefront remains baseline only; campaign publishing and Time Machine are future phases.
+- Operator campaign proposals can be generated and reviewed, but approval, storefront config generation, publishing, rollback, and Time Machine remain future phases.
 
 ## Next Recommended Task
 
-Continue Phase 1 by connecting the Metrics Copilot Operator handoff to the first fixture-backed campaign proposal flow.
+Continue Phase 1 by connecting an approved Operator campaign proposal to fixture-backed storefront config generation and validation.

@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     globals: false,
     environment: "node",
+    exclude: ["tests/e2e/**", "node_modules/**", "dist/**", ".next/**"],
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],

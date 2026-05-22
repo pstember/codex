@@ -32,6 +32,8 @@ dist/
 build/
 out/
 coverage/
+playwright-report/
+test-results/
 .next/
 .nuxt/
 .svelte-kit/

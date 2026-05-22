@@ -1,0 +1,44 @@
+"use server";
+
+import { randomUUID } from "node:crypto";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/app/auth/session";
+import { requirePermission } from "@/domain/auth";
+import { proposeCampaignFromMetricsTrace } from "@/domain/operatorCampaign";
+import { products } from "@/fixtures/products";
+import { fixtureCodexHarness } from "@/harness/codexHarness";
+import { getAppDatabase } from "@/persistence/appDatabase";
+
+export async function generateCampaignProposalAction(formData: FormData) {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    redirect("/");
+  }
+
+  requirePermission(user, "approve_campaign");
+
+  const traceId = String(formData.get("traceId") ?? "");
+  const database = getAppDatabase();
+  const sourceTrace = database.findMetricsTraceById(traceId);
+
+  if (!sourceTrace) {
+    throw new Error("Metrics Copilot trace was not found for this Operator handoff.");
+  }
+
+  const proposalId = randomUUID();
+
+  await proposeCampaignFromMetricsTrace({
+    id: proposalId,
+    sourceTrace,
+    harness: fixtureCodexHarness,
+    products,
+    createdByUserId: user.id,
+    createdAt: new Date(),
+    proposalStore: database,
+  });
+
+  revalidatePath("/operator");
+  redirect(`/operator?proposal=${proposalId}`);
+}

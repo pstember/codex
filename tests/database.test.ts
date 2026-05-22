@@ -97,4 +97,53 @@ describe("commerce SQLite database", () => {
       database.close();
     }
   });
+
+  it("persists Operator campaign proposals for review", () => {
+    const database = createCommerceDatabase();
+
+    try {
+      database.saveCampaignProposal({
+        id: "proposal-1",
+        sourceTraceId: "trace-1",
+        campaign: {
+          id: "fathers-day-2026",
+          name: "Grill, Travel, and Everyday Carry",
+          season: "fathers-day",
+          summary: "A fixture campaign.",
+          audience: "Father’s Day gift buyers.",
+          productIds: ["portable-charcoal-grill"],
+          expectedImpact: "Lift gift conversion.",
+          storefrontAngle: "Confident Father’s Day gifting.",
+        },
+        validationStatus: "valid",
+        validationErrors: [],
+        createdByUserId: "demo-operator",
+        createdAt: new Date("2026-05-22T12:00:00.000Z"),
+      });
+
+      expect(database.listRecentCampaignProposals()).toEqual([
+        {
+          id: "proposal-1",
+          sourceTraceId: "trace-1",
+          campaign: {
+            id: "fathers-day-2026",
+            name: "Grill, Travel, and Everyday Carry",
+            season: "fathers-day",
+            summary: "A fixture campaign.",
+            audience: "Father’s Day gift buyers.",
+            productIds: ["portable-charcoal-grill"],
+            expectedImpact: "Lift gift conversion.",
+            storefrontAngle: "Confident Father’s Day gifting.",
+          },
+          validationStatus: "valid",
+          validationErrors: [],
+          createdByUserId: "demo-operator",
+          createdAt: new Date("2026-05-22T12:00:00.000Z"),
+        },
+      ]);
+      expect(database.findCampaignProposalById("proposal-1")?.sourceTraceId).toBe("trace-1");
+    } finally {
+      database.close();
+    }
+  });
 });
