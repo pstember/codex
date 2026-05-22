@@ -17,6 +17,15 @@ export const styleTokenSchema = z.object({
   density: z.enum(["compact", "comfortable", "editorial"]),
 });
 
+export const campaignVisualAssetSchema = z.object({
+  id: z.string().min(1),
+  campaignId: z.string().min(1),
+  prompt: z.string().min(1),
+  alt: z.string().min(1),
+  source: z.enum(["fixture", "generated"]),
+  path: z.string().startsWith("/fixtures/"),
+});
+
 export const storefrontSectionSchema = z.object({
   id: z.string().min(1),
   type: z.enum(sectionTypes),
@@ -30,10 +39,12 @@ export const storefrontConfigSchema = z.object({
   campaignId: z.string().min(1),
   versionName: z.string().min(1),
   style: styleTokenSchema,
+  visualAsset: campaignVisualAssetSchema,
   sections: z.array(storefrontSectionSchema).min(1),
 });
 
 export type StorefrontConfig = z.infer<typeof storefrontConfigSchema>;
+export type CampaignVisualAsset = z.infer<typeof campaignVisualAssetSchema>;
 
 export function validateStorefrontProductReferences(
   config: StorefrontConfig,

@@ -9,6 +9,14 @@ export const baselineStorefront: StorefrontConfig = {
     accentColor: "#0f766e",
     density: "comfortable",
   },
+  visualAsset: {
+    id: "evergreen-hero-asset",
+    campaignId: "evergreen",
+    prompt: "Evergreen Atlas & Co. product curation.",
+    alt: "A clean Atlas & Co. arrangement of coffee, desk, and travel essentials.",
+    source: "fixture",
+    path: "/fixtures/baseline-hero.svg",
+  },
   sections: [
     {
       id: "baseline-hero",
@@ -35,6 +43,14 @@ export const fatherDayStorefront: StorefrontConfig = {
     accentColor: "#b45309",
     density: "editorial",
   },
+  visualAsset: {
+    id: "fathers-day-2026-hero-asset",
+    campaignId: "fathers-day-2026",
+    prompt: "Warm outdoor Father’s Day gifting scene.",
+    alt: "A warm outdoor Father’s Day gifting scene with grilling and travel essentials.",
+    source: "fixture",
+    path: "/fixtures/fathers-day-hero.svg",
+  },
   sections: [
     {
       id: "fd-hero",
@@ -60,6 +76,14 @@ export const secretSantaStorefront: StorefrontConfig = {
     theme: "holiday",
     accentColor: "#be123c",
     density: "compact",
+  },
+  visualAsset: {
+    id: "secret-santa-2026-hero-asset",
+    campaignId: "secret-santa-2026",
+    prompt: "Playful office Secret Santa gifting.",
+    alt: "A festive desk scene with wrapped small gifts from Atlas & Co.",
+    source: "fixture",
+    path: "/fixtures/secret-santa-hero.svg",
   },
   sections: [
     {

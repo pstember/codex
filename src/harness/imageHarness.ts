@@ -1,3 +1,5 @@
+import type { CampaignVisualAsset } from "@/domain/storefront";
+
 export interface CampaignAsset {
   id: string;
   campaignId: string;
@@ -13,7 +15,7 @@ export interface ImageHarness {
     campaignId: string;
     season: "fathers-day" | "secret-santa";
     visualDirection: string;
-  }): Promise<CampaignAsset>;
+  }): Promise<CampaignVisualAsset>;
 }
 
 export const fixtureImageHarness: ImageHarness = {
@@ -29,7 +31,7 @@ export const fixtureImageHarness: ImageHarness = {
         ? "A festive desk scene with wrapped small gifts from Atlas & Co."
         : "A warm outdoor Father’s Day gifting scene with grilling and travel essentials.",
       source: "fixture",
-      path: isSecretSanta ? "/fixtures/secret-santa-hero.png" : "/fixtures/fathers-day-hero.png",
+      path: isSecretSanta ? "/fixtures/secret-santa-hero.svg" : "/fixtures/fathers-day-hero.svg",
     };
   },
 };

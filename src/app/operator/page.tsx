@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { requireCurrentUser } from "@/app/auth/session";
 import { AppChrome } from "@/app/components/AppChrome";
 import {
@@ -286,6 +287,25 @@ export default async function OperatorPage({
                     </button>
                   </form>
                 ) : null}
+                <div className="mt-5 grid gap-4 rounded-md border border-neutral-200 p-4 md:grid-cols-[180px_1fr]">
+                  <Image
+                    alt={selectedStorefrontConfig.config.visualAsset.alt}
+                    className="aspect-[4/3] w-full rounded-md border border-neutral-200 object-cover"
+                    height={720}
+                    src={selectedStorefrontConfig.config.visualAsset.path}
+                    width={1200}
+                  />
+                  <div>
+                    <h3 className="text-sm font-semibold text-neutral-900">Hero visual prompt</h3>
+                    <p className="mt-2 text-sm leading-6 text-neutral-700">
+                      {selectedStorefrontConfig.config.visualAsset.prompt}
+                    </p>
+                    <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                      {selectedStorefrontConfig.config.visualAsset.source} asset ·{" "}
+                      {selectedStorefrontConfig.config.visualAsset.path}
+                    </p>
+                  </div>
+                </div>
                 <div className="mt-5 grid gap-3">
                   {selectedStorefrontConfig.config.sections.map((section) => (
                     <article className="rounded-md border border-neutral-200 p-4" key={section.id}>
@@ -411,6 +431,27 @@ export default async function OperatorPage({
                 <p className="mt-1 text-sm leading-6 text-neutral-700">
                   Removed:{" "}
                   {formatProductIds(timeMachineComparison.productChanges.removed, productsById)}
+                </p>
+              </article>
+            </div>
+            <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1fr]">
+              <article className="rounded-md border border-neutral-200 p-4">
+                <h3 className="text-sm font-semibold text-neutral-900">Strategic readout</h3>
+                <ul className="mt-2 space-y-1 text-sm leading-6 text-neutral-700">
+                  {timeMachineComparison.strategicSummary.map((summary) => (
+                    <li key={summary}>{summary}</li>
+                  ))}
+                </ul>
+              </article>
+              <article className="rounded-md border border-neutral-200 p-4">
+                <h3 className="text-sm font-semibold text-neutral-900">Hero and visual</h3>
+                <p className="mt-2 text-sm leading-6 text-neutral-700">
+                  {timeMachineComparison.heroChange.beforeTitle} to{" "}
+                  {timeMachineComparison.heroChange.afterTitle}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-neutral-700">
+                  {timeMachineComparison.visualAssetChange.beforePrompt} to{" "}
+                  {timeMachineComparison.visualAssetChange.afterPrompt}
                 </p>
               </article>
             </div>

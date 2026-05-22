@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-label="Atlas and Co. evergreen product arrangement">
+  <rect width="1200" height="720" fill="#f8faf7"/>
+  <rect x="96" y="96" width="1008" height="528" rx="32" fill="#0f766e" opacity="0.12"/>
+  <circle cx="312" cy="264" r="92" fill="#0f766e" opacity="0.24"/>
+  <rect x="486" y="178" width="278" height="364" rx="28" fill="#ffffff"/>
+  <rect x="532" y="226" width="186" height="86" rx="18" fill="#0f766e" opacity="0.82"/>
+  <rect x="532" y="344" width="186" height="34" rx="12" fill="#164e63" opacity="0.42"/>
+  <rect x="532" y="402" width="134" height="34" rx="12" fill="#164e63" opacity="0.24"/>
+  <rect x="792" y="254" width="166" height="220" rx="24" fill="#f4f1e8"/>
+  <circle cx="875" cy="334" r="46" fill="#0f766e" opacity="0.38"/>
+  <rect x="230" y="390" width="226" height="124" rx="24" fill="#ffffff"/>
+  <rect x="270" y="432" width="146" height="26" rx="10" fill="#0f766e" opacity="0.52"/>
+</svg>

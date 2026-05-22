@@ -43,9 +43,13 @@ test("Operator publishes Father’s Day and revamps it into Secret Santa", async
   await expect(page.getByText("Storefront Time Machine")).toBeVisible();
   await expect(page.getByText("Active Guest version: Father’s Day")).toBeVisible();
   await expect(page.getByText("Version delta")).toBeVisible();
-  await expect(page.getByText("Baseline Atlas & Co. to Father’s Day")).toBeVisible();
+  await expect(
+    page.getByText("Baseline Atlas & Co. to Father’s Day", { exact: true }),
+  ).toBeVisible();
   await expect(page.getByText("Campaign changed")).toBeVisible();
   await expect(page.getByText("Product changes")).toBeVisible();
+  await expect(page.getByText("Hero visual prompt")).toBeVisible();
+  await expect(page.getByText("Strategic readout")).toBeVisible();
 
   await page.getByRole("button", { name: "Revamp for Secret Santa" }).click();
   await page.waitForURL(/\/operator\?proposal=/);
@@ -72,7 +76,12 @@ test("Operator publishes Father’s Day and revamps it into Secret Santa", async
   await page.waitForURL(/\/operator\?storefront=.*&version=/);
 
   await expect(page.getByText("Active Guest version: Secret Santa")).toBeVisible();
-  await expect(page.getByText("Baseline Atlas & Co. to Secret Santa")).toBeVisible();
+  await expect(
+    page.getByText("Baseline Atlas & Co. to Secret Santa", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Playful office Secret Santa gifting.", { exact: true }),
+  ).toBeVisible();
 
   await page.getByRole("link", { name: "Open Guest storefront" }).click();
   await page.waitForURL("**/store");

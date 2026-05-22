@@ -77,3 +77,9 @@ Rationale: Next 16 Turbopack currently fails to load `node:sqlite` in this app, 
 Enforce the under-£50 Secret Santa constraint at both campaign proposal validation and storefront config validation.
 
 Rationale: the seasonal revamp is fixture-backed for now, but generated output must still be server-validated before persistence or publishing.
+
+## 2026-05-22 - Storefront visual assets are validated config data
+
+Storefront configs now carry validated hero visual asset metadata generated through the image harness, with fixture assets used for deterministic demo runs.
+
+Rationale: Secret Santa needs a visible creative transformation, but visual output should remain traceable, server-validated data rather than ad hoc UI decoration or live generation.

@@ -7,6 +7,7 @@ import {
   validateStorefrontProductReferences,
 } from "@/domain/storefront";
 import type { CodexHarness } from "@/harness/codexHarness";
+import { fixtureImageHarness, type ImageHarness } from "@/harness/imageHarness";
 
 export const generatedStorefrontConfigSchema = z.object({
   id: z.string().min(1),
@@ -28,6 +29,7 @@ export async function generateStorefrontConfigFromProposal(input: {
   id: string;
   proposal: CampaignProposal;
   harness: CodexHarness;
+  imageHarness?: ImageHarness;
   products: Product[];
   createdByUserId: string;
   createdAt: Date;
@@ -37,7 +39,19 @@ export async function generateStorefrontConfigFromProposal(input: {
     throw new Error("Only valid campaign proposals can generate storefront configs.");
   }
 
-  const config = await input.harness.generateStorefrontConfig(input.proposal.campaign);
+  const generatedConfig = await input.harness.generateStorefrontConfig(input.proposal.campaign);
+  const shouldGenerateVisualAsset = input.imageHarness || !generatedConfig.visualAsset;
+  const visualAsset = shouldGenerateVisualAsset
+    ? await (input.imageHarness ?? fixtureImageHarness).generateCampaignHero({
+        campaignId: input.proposal.campaign.id,
+        season: input.proposal.campaign.season,
+        visualDirection: input.proposal.campaign.storefrontAngle,
+      })
+    : generatedConfig.visualAsset;
+  const config = {
+    ...generatedConfig,
+    visualAsset,
+  };
   const validationErrors = validateGeneratedStorefrontConfig(
     config,
     input.proposal,
@@ -74,6 +88,12 @@ function validateGeneratedStorefrontConfig(
   if (parsed.data.campaignId !== proposal.campaign.id) {
     errors.push(
       `Storefront campaign "${parsed.data.campaignId}" does not match proposal campaign "${proposal.campaign.id}".`,
+    );
+  }
+
+  if (parsed.data.visualAsset.campaignId !== parsed.data.campaignId) {
+    errors.push(
+      `Storefront visual asset campaign "${parsed.data.visualAsset.campaignId}" does not match storefront campaign "${parsed.data.campaignId}".`,
     );
   }
 

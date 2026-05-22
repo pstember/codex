@@ -4,6 +4,7 @@ import { generateStorefrontConfigFromProposal } from "@/domain/storefrontGenerat
 import { products } from "@/fixtures/products";
 import type { CodexHarness } from "@/harness/codexHarness";
 import { fixtureCodexHarness } from "@/harness/codexHarness";
+import type { ImageHarness } from "@/harness/imageHarness";
 
 describe("Operator storefront config generation", () => {
   it("creates and saves a validated storefront config from an approved campaign proposal", async () => {
@@ -120,7 +121,98 @@ describe("Operator storefront config generation", () => {
       'Secret Santa storefront product "Portable Charcoal Grill" exceeds the £50 limit.',
     );
   });
+
+  it("rejects invalid campaign proposals before storefront generation", async () => {
+    await expect(
+      generateStorefrontConfigFromProposal({
+        id: "storefront-invalid-proposal",
+        proposal: {
+          ...fatherDayProposal,
+          validationStatus: "invalid",
+          validationErrors: ["Campaign references unknown product."],
+        },
+        harness: fixtureCodexHarness,
+        products,
+        createdByUserId: "demo-operator",
+        createdAt: new Date("2026-05-22T14:50:00.000Z"),
+        storefrontStore: {
+          saveStorefrontConfig() {},
+        },
+      }),
+    ).rejects.toThrow("Only valid campaign proposals can generate storefront configs.");
+  });
+
+  it("marks generated storefront configs invalid when the visual asset belongs to another campaign", async () => {
+    const storefront = await generateStorefrontConfigFromProposal({
+      id: "storefront-visual-mismatch",
+      proposal: fatherDayProposal,
+      harness: fixtureCodexHarness,
+      imageHarness: {
+        mode: "fixture",
+        async generateCampaignHero() {
+          return {
+            id: "secret-santa-2026-hero-asset",
+            campaignId: "secret-santa-2026",
+            prompt: "Wrong seasonal visual.",
+            alt: "A mismatched Secret Santa visual.",
+            source: "fixture",
+            path: "/fixtures/secret-santa-hero.svg",
+          };
+        },
+      },
+      products,
+      createdByUserId: "demo-operator",
+      createdAt: new Date("2026-05-22T14:55:00.000Z"),
+      storefrontStore: {
+        saveStorefrontConfig() {},
+      },
+    });
+
+    expect(storefront.validationStatus).toBe("invalid");
+    expect(storefront.validationErrors).toContain(
+      'Storefront visual asset campaign "secret-santa-2026" does not match storefront campaign "fathers-day-2026".',
+    );
+  });
+
+  it("adds a fixture-backed Secret Santa hero asset from the campaign visual direction", async () => {
+    const storefront = await generateStorefrontConfigFromProposal({
+      id: "storefront-secret-santa",
+      proposal: secretSantaProposal,
+      harness: fixtureCodexHarness,
+      imageHarness: secretSantaImageHarness,
+      products,
+      createdByUserId: "demo-operator",
+      createdAt: new Date("2026-05-22T15:00:00.000Z"),
+      storefrontStore: {
+        saveStorefrontConfig() {},
+      },
+    });
+
+    expect(storefront.validationStatus).toBe("valid");
+    expect(storefront.config).toHaveProperty("visualAsset", {
+      id: "secret-santa-2026-hero-asset",
+      campaignId: "secret-santa-2026",
+      prompt: "Playful office Secret Santa gifting.",
+      alt: "Fixture holiday desk scene with wrapped Secret Santa gifts from Atlas & Co.",
+      source: "fixture",
+      path: "/fixtures/secret-santa-hero.svg",
+    });
+  });
 });
+
+const secretSantaImageHarness: ImageHarness = {
+  mode: "fixture",
+  async generateCampaignHero(input) {
+    return {
+      id: `${input.campaignId}-hero-asset`,
+      campaignId: input.campaignId,
+      prompt: input.visualDirection,
+      alt: "Fixture holiday desk scene with wrapped Secret Santa gifts from Atlas & Co.",
+      source: "fixture",
+      path: "/fixtures/secret-santa-hero.svg",
+    };
+  },
+};
 
 const fatherDayProposal: CampaignProposal = {
   id: "proposal-1",

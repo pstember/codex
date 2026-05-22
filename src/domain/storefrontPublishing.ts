@@ -21,6 +21,19 @@ export interface StorefrontVersionComparison {
   baseVersionName: string;
   selectedVersionName: string;
   campaignChanged: boolean;
+  heroChange: {
+    beforeTitle: string;
+    afterTitle: string;
+    beforeBody: string;
+    afterBody: string;
+  };
+  visualAssetChange: {
+    beforePrompt: string;
+    afterPrompt: string;
+    beforePath: string;
+    afterPath: string;
+  };
+  strategicSummary: string[];
   styleChanges: Array<{
     label: string;
     before: string;
@@ -77,10 +90,26 @@ export function compareStorefrontVersions({
   base: StorefrontConfig;
   selected: StorefrontConfig;
 }): StorefrontVersionComparison {
+  const baseHero = getHeroSection(base);
+  const selectedHero = getHeroSection(selected);
+
   return {
     baseVersionName: base.versionName,
     selectedVersionName: selected.versionName,
     campaignChanged: base.campaignId !== selected.campaignId,
+    heroChange: {
+      beforeTitle: baseHero.title,
+      afterTitle: selectedHero.title,
+      beforeBody: baseHero.body ?? "",
+      afterBody: selectedHero.body ?? "",
+    },
+    visualAssetChange: {
+      beforePrompt: base.visualAsset.prompt,
+      afterPrompt: selected.visualAsset.prompt,
+      beforePath: base.visualAsset.path,
+      afterPath: selected.visualAsset.path,
+    },
+    strategicSummary: buildStrategicSummary(base, selected, baseHero, selectedHero),
     styleChanges: [
       styleChange("Theme", base.style.theme, selected.style.theme),
       styleChange("Accent color", base.style.accentColor, selected.style.accentColor),
@@ -92,6 +121,55 @@ export function compareStorefrontVersions({
     ),
     productChanges: compareLists(getUniqueProductIds(base), getUniqueProductIds(selected)),
   };
+}
+
+function getHeroSection(config: StorefrontConfig) {
+  return config.sections.find((section) => section.type === "hero") ?? config.sections[0];
+}
+
+function buildStrategicSummary(
+  base: StorefrontConfig,
+  selected: StorefrontConfig,
+  baseHero: ReturnType<typeof getHeroSection>,
+  selectedHero: ReturnType<typeof getHeroSection>,
+): string[] {
+  const summary = [];
+
+  if (base.campaignId !== selected.campaignId) {
+    summary.push(`Campaign shifted from ${base.versionName} to ${selected.versionName}.`);
+  } else {
+    summary.push(`Campaign stayed on ${selected.versionName}.`);
+  }
+
+  if (baseHero.title !== selectedHero.title || baseHero.body !== selectedHero.body) {
+    summary.push(`Hero moved from ${summarizeHero(baseHero)} to ${summarizeHero(selectedHero)}.`);
+  }
+
+  if (base.visualAsset.path !== selected.visualAsset.path) {
+    summary.push(
+      `Creative asset changed from ${base.visualAsset.path} to ${selected.visualAsset.path}.`,
+    );
+  }
+
+  return summary;
+}
+
+function summarizeHero(section: ReturnType<typeof getHeroSection>) {
+  const text = `${section.title} ${section.body ?? ""}`.toLowerCase();
+
+  if (text.includes("grill") && text.includes("travel")) {
+    return "grill, travel, and everyday carry gifting";
+  }
+
+  if (text.includes("under £50") || text.includes("office")) {
+    return "under-£50 office gifting";
+  }
+
+  if (text.includes("everyday")) {
+    return "everyday curation";
+  }
+
+  return section.title;
 }
 
 function styleChange(label: string, before: string, after: string) {

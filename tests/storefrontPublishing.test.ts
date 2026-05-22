@@ -102,6 +102,23 @@ describe("storefront publishing", () => {
       baseVersionName: "Baseline Atlas & Co.",
       selectedVersionName: "Secret Santa",
       campaignChanged: true,
+      heroChange: {
+        beforeTitle: "Curated goods for useful everyday rituals.",
+        afterTitle: "Secret Santa gifts under £50 that do not feel last-minute.",
+        beforeBody: "Home, travel, coffee, grooming, and giftable essentials from Atlas & Co.",
+        afterBody: "Playful, useful, and easy-to-ship picks for office gift exchanges.",
+      },
+      visualAssetChange: {
+        beforePrompt: "Evergreen Atlas & Co. product curation.",
+        afterPrompt: "Playful office Secret Santa gifting.",
+        beforePath: "/fixtures/baseline-hero.svg",
+        afterPath: "/fixtures/secret-santa-hero.svg",
+      },
+      strategicSummary: [
+        "Campaign shifted from Baseline Atlas & Co. to Secret Santa.",
+        "Hero moved from everyday curation to under-£50 office gifting.",
+        "Creative asset changed from /fixtures/baseline-hero.svg to /fixtures/secret-santa-hero.svg.",
+      ],
       styleChanges: [
         {
           label: "Theme",
@@ -133,6 +150,57 @@ describe("storefront publishing", () => {
         unchanged: ["desk-organizer-tray", "pour-over-coffee-set", "wireless-charging-valet"],
       },
     });
+  });
+
+  it("explains the Father’s Day to Secret Santa revamp for Time Machine review", () => {
+    expect(
+      compareStorefrontVersions({
+        base: fatherDayStorefront,
+        selected: secretSantaStorefront,
+      }),
+    ).toMatchObject({
+      baseVersionName: "Father’s Day",
+      selectedVersionName: "Secret Santa",
+      campaignChanged: true,
+      heroChange: {
+        beforeTitle: "Father’s Day gifts for grill masters, travelers, and everyday fixers.",
+        afterTitle: "Secret Santa gifts under £50 that do not feel last-minute.",
+      },
+      visualAssetChange: {
+        beforePrompt: "Warm outdoor Father’s Day gifting scene.",
+        afterPrompt: "Playful office Secret Santa gifting.",
+        beforePath: "/fixtures/fathers-day-hero.svg",
+        afterPath: "/fixtures/secret-santa-hero.svg",
+      },
+      strategicSummary: [
+        "Campaign shifted from Father’s Day to Secret Santa.",
+        "Hero moved from grill, travel, and everyday carry gifting to under-£50 office gifting.",
+        "Creative asset changed from /fixtures/fathers-day-hero.svg to /fixtures/secret-santa-hero.svg.",
+      ],
+      sectionChanges: {
+        added: [
+          "Secret Santa gifts under £50 that do not feel last-minute.",
+          "Safe bets under £50",
+        ],
+        removed: [
+          "Father’s Day gifts for grill masters, travelers, and everyday fixers.",
+          "Build the weekend-ready bundle",
+        ],
+      },
+      productChanges: {
+        added: ["desk-organizer-tray", "pour-over-coffee-set"],
+        removed: ["leather-weekender-bag", "portable-charcoal-grill"],
+      },
+    });
+  });
+
+  it("summarizes unchanged versions without inventing hero or creative changes", () => {
+    expect(
+      compareStorefrontVersions({
+        base: fatherDayStorefront,
+        selected: fatherDayStorefront,
+      }).strategicSummary,
+    ).toEqual(["Campaign stayed on Father’s Day."]);
   });
 });
 

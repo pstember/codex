@@ -45,6 +45,7 @@ The app should use a server-side harness with these capabilities:
 - `fixtureCodexHarness`: deterministic outputs for tests, local development, and Loom replay.
 - `cliCodexHarness`: optional local Codex CLI integration where useful.
 - `appServerCodexHarness`: optional adapter for the Codex App Server protocol. Support `stdio://` for spawned child-process use and `ws://127.0.0.1:<port>` for manually started local development. The adapter should be gated by configuration and should never be required for tests.
+- Storefront config generation enriches valid proposals with image-harness hero asset metadata before validation and persistence.
 
 ## Image Harness Interface
 
@@ -52,6 +53,7 @@ The image harness should:
 
 - Return fixture-backed visual assets for deterministic demo runs.
 - Store prompts and asset metadata.
+- Current fixture assets live under `public/fixtures/` for baseline, Father’s Day, and Secret Santa hero visuals.
 - Later support live image generation or editing when the environment is ready.
 
 ## Validation Boundary

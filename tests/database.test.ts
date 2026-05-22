@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { PublishedStorefrontVersion } from "@/domain/storefrontPublishing";
 import { products } from "@/fixtures/products";
 import { demoUsers } from "@/fixtures/users";
 import { createCommerceDatabase } from "@/persistence/database";
@@ -163,6 +164,7 @@ describe("commerce SQLite database", () => {
             accentColor: "#b45309",
             density: "editorial",
           },
+          visualAsset: fatherDayVisualAsset,
           sections: [
             {
               id: "fd-hero",
@@ -192,6 +194,7 @@ describe("commerce SQLite database", () => {
               accentColor: "#b45309",
               density: "editorial",
             },
+            visualAsset: fatherDayVisualAsset,
             sections: [
               {
                 id: "fd-hero",
@@ -216,6 +219,46 @@ describe("commerce SQLite database", () => {
     }
   });
 
+  it("backfills visual assets when reading legacy storefront configs", () => {
+    const database = createCommerceDatabase();
+
+    try {
+      database.savePublishedStorefrontVersion({
+        id: "legacy-version",
+        sourceStorefrontConfigId: "legacy-draft",
+        config: {
+          id: "secret-santa-storefront",
+          campaignId: "secret-santa-2026",
+          versionName: "Secret Santa",
+          style: {
+            theme: "holiday",
+            accentColor: "#be123c",
+            density: "compact",
+          },
+          sections: [
+            {
+              id: "ss-hero",
+              type: "hero",
+              title: "Secret Santa gifts",
+              body: "Under £50.",
+              productIds: ["pour-over-coffee-set"],
+            },
+          ],
+        } as PublishedStorefrontVersion["config"],
+        status: "active",
+        rollbackOfVersionId: null,
+        publishedByUserId: "demo-operator",
+        publishedAt: new Date("2026-05-22T15:30:00.000Z"),
+      });
+
+      expect(database.findActiveStorefrontVersion()?.config.visualAsset).toEqual(
+        secretSantaVisualAsset,
+      );
+    } finally {
+      database.close();
+    }
+  });
+
   it("persists published storefront versions and tracks the active version", () => {
     const database = createCommerceDatabase();
 
@@ -232,6 +275,7 @@ describe("commerce SQLite database", () => {
             accentColor: "#b45309",
             density: "editorial",
           },
+          visualAsset: fatherDayVisualAsset,
           sections: [
             {
               id: "fd-hero",
@@ -259,6 +303,7 @@ describe("commerce SQLite database", () => {
             accentColor: "#be123c",
             density: "compact",
           },
+          visualAsset: secretSantaVisualAsset,
           sections: [
             {
               id: "ss-hero",
@@ -318,6 +363,7 @@ describe("commerce SQLite database", () => {
             accentColor: "#b45309",
             density: "editorial",
           },
+          visualAsset: fatherDayVisualAsset,
           sections: [
             {
               id: "fd-hero",
@@ -345,3 +391,21 @@ describe("commerce SQLite database", () => {
     }
   });
 });
+
+const fatherDayVisualAsset = {
+  id: "fathers-day-2026-hero-asset",
+  campaignId: "fathers-day-2026",
+  prompt: "Warm outdoor Father’s Day gifting scene.",
+  alt: "A warm outdoor Father’s Day gifting scene with grilling and travel essentials.",
+  source: "fixture" as const,
+  path: "/fixtures/fathers-day-hero.svg",
+};
+
+const secretSantaVisualAsset = {
+  id: "secret-santa-2026-hero-asset",
+  campaignId: "secret-santa-2026",
+  prompt: "Playful office Secret Santa gifting.",
+  alt: "A festive desk scene with wrapped small gifts from Atlas & Co.",
+  source: "fixture" as const,
+  path: "/fixtures/secret-santa-hero.svg",
+};

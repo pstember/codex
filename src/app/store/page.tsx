@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import { getCurrentUser } from "@/app/auth/session";
@@ -48,7 +49,15 @@ export default async function StorePage() {
               </div>
             ) : null}
           </div>
-          <div className={heroVisualClassName(storefront.style.theme)} />
+          <div className="overflow-hidden rounded-lg border border-neutral-200 bg-neutral-100">
+            <Image
+              alt={storefront.visualAsset.alt}
+              className="aspect-[4/5] h-full w-full object-cover"
+              height={720}
+              src={storefront.visualAsset.path}
+              width={1200}
+            />
+          </div>
         </div>
         <div className="grid gap-6 pb-12">
           {storefront.sections
@@ -99,18 +108,4 @@ function storefrontAccent(storefront: StorefrontConfig) {
   return {
     "--storefront-accent": storefront.style.accentColor,
   } as CSSProperties;
-}
-
-function heroVisualClassName(theme: StorefrontConfig["style"]["theme"]): string {
-  const baseClassName = "aspect-[4/5] rounded-lg";
-
-  if (theme === "holiday") {
-    return `${baseClassName} bg-[linear-gradient(135deg,#be123c,#fef3c7_55%,#14532d)]`;
-  }
-
-  if (theme === "summer") {
-    return `${baseClassName} bg-[linear-gradient(135deg,#b45309,#fde68a_55%,#0f172a)]`;
-  }
-
-  return `${baseClassName} bg-[linear-gradient(135deg,#0f766e,#f5d7a1_55%,#171717)]`;
 }

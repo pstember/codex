@@ -10,7 +10,7 @@ describe("fixture image harness", () => {
     });
 
     expect(asset.source).toBe("fixture");
-    expect(asset.path).toBe("/fixtures/fathers-day-hero.png");
+    expect(asset.path).toBe("/fixtures/fathers-day-hero.svg");
     expect(asset.alt).toContain("Father’s Day");
   });
 
@@ -22,7 +22,7 @@ describe("fixture image harness", () => {
     });
 
     expect(asset.source).toBe("fixture");
-    expect(asset.path).toBe("/fixtures/secret-santa-hero.png");
+    expect(asset.path).toBe("/fixtures/secret-santa-hero.svg");
     expect(asset.alt).toContain("festive");
   });
 });

@@ -3,6 +3,7 @@ import type { AuthStore } from "@/domain/auth";
 import type { MetricsTrace } from "@/domain/metricsTrace";
 import type { CampaignProposal } from "@/domain/operatorCampaign";
 import type { Product } from "@/domain/product";
+import type { CampaignVisualAsset, StorefrontConfig } from "@/domain/storefront";
 import type { GeneratedStorefrontConfig } from "@/domain/storefrontGeneration";
 import type { PublishedStorefrontVersion } from "@/domain/storefrontPublishing";
 import type { AuthenticatedUser, User } from "@/domain/users";
@@ -471,7 +472,7 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
     return {
       id: row.id,
       sourceProposalId: row.sourceProposalId,
-      config: JSON.parse(row.configJson) as GeneratedStorefrontConfig["config"],
+      config: parseStorefrontConfigJson(row.configJson),
       validationStatus: row.validationStatus,
       validationErrors: JSON.parse(row.validationErrorsJson) as string[],
       createdByUserId: row.createdByUserId,
@@ -491,11 +492,53 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
     return {
       id: row.id,
       sourceStorefrontConfigId: row.sourceStorefrontConfigId,
-      config: JSON.parse(row.configJson) as PublishedStorefrontVersion["config"],
+      config: parseStorefrontConfigJson(row.configJson),
       status: row.status,
       rollbackOfVersionId: row.rollbackOfVersionId,
       publishedByUserId: row.publishedByUserId,
       publishedAt: new Date(row.publishedAt),
+    };
+  }
+
+  function parseStorefrontConfigJson(configJson: string): StorefrontConfig {
+    const config = JSON.parse(configJson) as StorefrontConfig;
+
+    return {
+      ...config,
+      visualAsset: config.visualAsset ?? fallbackVisualAssetFor(config),
+    };
+  }
+
+  function fallbackVisualAssetFor(config: StorefrontConfig): CampaignVisualAsset {
+    if (config.campaignId === "secret-santa-2026") {
+      return {
+        id: "secret-santa-2026-hero-asset",
+        campaignId: "secret-santa-2026",
+        prompt: "Playful office Secret Santa gifting.",
+        alt: "A festive desk scene with wrapped small gifts from Atlas & Co.",
+        source: "fixture",
+        path: "/fixtures/secret-santa-hero.svg",
+      };
+    }
+
+    if (config.campaignId === "fathers-day-2026") {
+      return {
+        id: "fathers-day-2026-hero-asset",
+        campaignId: "fathers-day-2026",
+        prompt: "Warm outdoor Father’s Day gifting scene.",
+        alt: "A warm outdoor Father’s Day gifting scene with grilling and travel essentials.",
+        source: "fixture",
+        path: "/fixtures/fathers-day-hero.svg",
+      };
+    }
+
+    return {
+      id: "evergreen-hero-asset",
+      campaignId: config.campaignId,
+      prompt: "Evergreen Atlas & Co. product curation.",
+      alt: "A clean Atlas & Co. arrangement of coffee, desk, and travel essentials.",
+      source: "fixture",
+      path: "/fixtures/baseline-hero.svg",
     };
   }
 
