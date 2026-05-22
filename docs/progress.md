@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot with GraphQL validation, chart mapping, saved traces, Operator handoff, fixture-backed campaign proposal generation, fixture-backed storefront config generation, publishing controls, Guest rendering, rollback groundwork, Storefront Time Machine comparison, Secret Santa visual prompts/assets, richer seasonal comparison, and explicit Guest version selection.
+Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot with GraphQL validation, chart mapping, saved traces, Operator handoff, fixture-backed campaign proposal generation, fixture-backed storefront config generation, publishing controls, Guest rendering, rollback groundwork, Storefront Time Machine comparison, Secret Santa visual prompts/assets, richer seasonal comparison, explicit Guest version selection, and Mission Control Demo Mode replay groundwork.
 
 ## Completed
 
@@ -60,15 +60,18 @@ Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot w
 - Extended the Playwright smoke to assert the new visual prompt/readout during the Father’s Day to Secret Santa workflow.
 - Added explicit Guest version selection on `/store` using `?version=baseline` or a published version id, including inactive version previews without changing the active publication.
 - Extended the Playwright smoke so Guest selects the inactive Father’s Day version after Secret Santa is active.
+- Added a tested Mission Control replay model that derives demo milestones, current action, completion count, and active storefront from persisted workflow artifacts.
+- Surfaced Mission Control Demo Mode on the home screen with replay checkpoints linking into Manager, Operator, and Guest views.
 
 ## Test Status
 
 - `npm run typecheck`: passing.
 - `npm run lint`: passing.
-- `npm test`: passing, 11 files and 54 tests.
-- `npm run coverage`: passing, 91.23% statements, 91.40% lines, and 81.36% branches.
+- `npm test`: passing, 12 files and 57 tests.
+- `npm run coverage`: passing, 91.79% statements, 91.91% lines, and 84.10% branches.
 - `npm run build`: passing with `next build --webpack`.
 - Playwright e2e smoke: passing for Manager login, saved-run creation, Operator login, handoff selection, fixture-backed Father’s Day proposal generation, proposal approval, storefront config rendering, visual prompt review, publishing, Time Machine active status and strategic comparison, Secret Santa revamp, seasonal storefront config rendering, Secret Santa publishing, Guest active storefront rendering, and explicit inactive-version Guest preview.
+- Home page visual QA: passed with the Mission Control Demo Mode panel visible; Chromium emitted the existing hidden-input hydration warning during screenshot capture.
 
 ## Dependency Status
 
@@ -89,7 +92,8 @@ Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot w
 - Metrics Copilot traces persist for the approved Manager metric questions, with trace detail drilldown and saved-run comparison now available.
 - Storefront now renders the active published version with baseline fallback, fixture-backed hero visuals, and explicit baseline/published-version selection; richer visual polish remains future work.
 - Operator campaign proposals can be generated and reviewed, valid proposals can be revamped into Secret Santa, valid proposals can generate validated storefront configs, and valid configs can be published; rollback groundwork exists through published version history and Operator rollback actions.
+- Mission Control Demo Mode now has a replay checklist on the home screen; split-screen command-center polish and replay controls remain future work.
 
 ## Next Recommended Task
 
-Continue Phase 1 with Mission Control Demo Mode groundwork or replay polish.
+Continue Phase 1 with Mission Control split-screen polish, replay controls, or Loom capture hardening.

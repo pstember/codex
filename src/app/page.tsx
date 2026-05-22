@@ -1,11 +1,25 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/app/auth/session";
 import { AuthPanel } from "@/app/components/AuthPanel";
+import {
+  buildMissionControlReplay,
+  type MissionControlReplayStep,
+} from "@/domain/missionControlReplay";
 import { fatherDayCampaign, secretSantaCampaign } from "@/fixtures/campaigns";
 import { products } from "@/fixtures/products";
+import { getAppDatabase } from "@/persistence/appDatabase";
 
 export default async function Home() {
   const currentUser = await getCurrentUser();
+  const database = getAppDatabase();
+  const activeVersion = database.findActiveStorefrontVersion();
+  const replay = buildMissionControlReplay({
+    traces: database.listRecentMetricsTraces(),
+    proposals: database.listRecentCampaignProposals(),
+    storefrontConfigs: database.listRecentStorefrontConfigs(),
+    publishedVersions: database.listPublishedStorefrontVersions(),
+    activeVersionId: activeVersion?.id ?? null,
+  });
 
   return (
     <main className="min-h-screen bg-[#f7f4ef] text-neutral-950">
@@ -19,8 +33,8 @@ export default async function Home() {
               From commerce insight to seasonal storefront in one traceable Codex run.
             </h1>
             <p className="mt-5 max-w-2xl text-lg leading-8 text-neutral-700">
-              Phase 0 scaffold is focused on contracts, fixtures, documentation, and tests. The
-              polished Manager, Operator, and Guest workflows come next.
+              Run the Manager insight, Operator activation, Time Machine comparison, and Guest
+              storefront from one replayable demo path.
             </p>
           </div>
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
@@ -43,6 +57,42 @@ export default async function Home() {
         </div>
         <aside className="space-y-4">
           <AuthPanel currentUser={currentUser} />
+          <div className="rounded-lg border border-neutral-300 bg-white p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">
+                  Demo Mode
+                </p>
+                <h2 className="mt-2 text-xl font-semibold">Mission Control replay</h2>
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-semibold">
+                  {replay.completedCount}/{replay.totalCount}
+                </p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                  {replay.completedCount === replay.totalCount ? "ready" : "progress"}
+                </p>
+              </div>
+            </div>
+            <p className="mt-3 text-sm leading-6 text-neutral-700">{replay.nextAction}</p>
+            <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+              Active storefront: {replay.activeVersionName}
+            </p>
+            <ol className="mt-4 space-y-2">
+              {replay.steps.map((step) => (
+                <li
+                  className="flex items-center justify-between gap-3 rounded-md border border-neutral-200 px-3 py-2 text-sm"
+                  key={step.id}
+                >
+                  <Link className="min-w-0 underline-offset-4 hover:underline" href={step.href}>
+                    <span className="block truncate font-semibold">{step.title}</span>
+                    <span className="text-xs text-neutral-500">{step.role}</span>
+                  </Link>
+                  <span className={replayStatusClassName(step)}>{step.status}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
           <div className="rounded-lg border border-neutral-300 bg-neutral-950 p-6 text-white">
             <p className="text-sm uppercase tracking-wide text-emerald-300">Golden Query</p>
             <p className="mt-3 text-2xl font-semibold">
@@ -72,4 +122,16 @@ export default async function Home() {
       </section>
     </main>
   );
+}
+
+function replayStatusClassName(step: MissionControlReplayStep) {
+  if (step.status === "complete") {
+    return "shrink-0 rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-800";
+  }
+
+  if (step.status === "current") {
+    return "shrink-0 rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold uppercase tracking-wide text-amber-800";
+  }
+
+  return "shrink-0 rounded-full bg-neutral-100 px-2 py-1 text-xs font-semibold uppercase tracking-wide text-neutral-600";
 }
