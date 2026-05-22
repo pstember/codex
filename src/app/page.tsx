@@ -31,142 +31,184 @@ export default async function Home({ searchParams }: HomeProps) {
 
   return (
     <main className="min-h-screen bg-[#f7f4ef] text-neutral-950">
-      <section className="mx-auto grid max-w-6xl gap-8 px-6 py-10 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="flex min-h-[72vh] flex-col justify-between rounded-lg border border-neutral-300 bg-white p-8 shadow-sm">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">
-              Atlas & Co. Mission Control
-            </p>
-            <h1 className="mt-4 max-w-3xl text-5xl font-semibold leading-tight">
-              From commerce insight to seasonal storefront in one traceable Codex run.
-            </h1>
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-neutral-700">
-              Run the Manager insight, Operator activation, Time Machine comparison, and Guest
-              storefront from one replayable demo path.
-            </p>
-          </div>
-          <div className="mt-8 grid gap-3 sm:grid-cols-3">
-            <Link
-              className="rounded-md border border-neutral-200 bg-neutral-50 p-4"
-              href="/manager"
-            >
-              <p className="text-sm font-semibold">Store Manager</p>
-            </Link>
-            <Link
-              className="rounded-md border border-neutral-200 bg-neutral-50 p-4"
-              href="/operator"
-            >
-              <p className="text-sm font-semibold">Store Operator</p>
-            </Link>
-            <Link className="rounded-md border border-neutral-200 bg-neutral-50 p-4" href="/store">
-              <p className="text-sm font-semibold">Guest storefront</p>
-            </Link>
-          </div>
-        </div>
-        <aside className="space-y-4">
-          <AuthPanel currentUser={currentUser} />
-          <div className="rounded-lg border border-neutral-300 bg-white p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">
-                  Demo Mode
-                </p>
-                <h2 className="mt-2 text-xl font-semibold">Mission Control replay</h2>
-              </div>
-              <div className="text-right">
-                <p className="text-2xl font-semibold">
-                  {replay.completedCount}/{replay.totalCount}
-                </p>
-                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                  {replay.completedCount === replay.totalCount ? "ready" : "progress"}
-                </p>
-              </div>
+      <section className="mx-auto grid max-w-7xl gap-6 px-5 py-6 lg:min-h-screen lg:grid-cols-[0.95fr_1.05fr] lg:px-8">
+        <div className="flex min-h-[calc(100vh-3rem)] min-w-0 flex-col gap-4 rounded-lg border border-neutral-300 bg-white p-5 shadow-sm lg:p-6">
+          <div className="flex flex-col items-start gap-3 border-b border-neutral-200 pb-4 sm:flex-row sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">
+                Atlas & Co. Mission Control
+              </p>
+              <h1 className="mt-2 text-3xl font-semibold leading-tight">Loom command center</h1>
             </div>
-            <p className="mt-3 text-sm leading-6 text-neutral-700">{replay.nextAction}</p>
+            <div className="text-right">
+              <p className="text-2xl font-semibold">
+                {replay.completedCount}/{replay.totalCount}
+              </p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                {replay.completedCount === replay.totalCount ? "ready" : "progress"}
+              </p>
+            </div>
+          </div>
+          <div className="rounded-md border border-neutral-200 bg-neutral-50 p-4">
+            <p className="text-sm font-semibold text-neutral-900">{replay.nextAction}</p>
             <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-neutral-500">
               Active storefront: {replay.activeVersionName}
             </p>
-            <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">
-                    Step {replay.selectedStep.position}/{replay.totalCount} ·{" "}
-                    {replay.selectedStep.status}
-                  </p>
-                  <p className="mt-1 font-semibold">{replay.selectedStep.title}</p>
-                </div>
-                <Link
-                  className="shrink-0 rounded-md bg-neutral-950 px-3 py-2 text-xs font-semibold text-white"
-                  href={replay.selectedStep.href}
-                >
-                  {replay.selectedStep.action}
-                </Link>
+          </div>
+          <div className="rounded-md border border-emerald-200 bg-emerald-50 p-4">
+            <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">
+                  Step {replay.selectedStep.position}/{replay.totalCount} ·{" "}
+                  {replay.selectedStep.status}
+                </p>
+                <p className="mt-1 font-semibold">{replay.selectedStep.title}</p>
               </div>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <Link
-                  className="rounded-md border border-emerald-200 bg-white px-3 py-2 text-center text-sm font-semibold text-emerald-900"
-                  href={replay.selectedStep.previousHref}
-                >
-                  Previous
-                </Link>
-                <Link
-                  className="rounded-md border border-emerald-200 bg-white px-3 py-2 text-center text-sm font-semibold text-emerald-900"
-                  href={replay.selectedStep.nextHref}
-                >
-                  Next
-                </Link>
-              </div>
+              <Link
+                className="rounded-md bg-neutral-950 px-3 py-2 text-center text-xs font-semibold text-white sm:shrink-0"
+                href={replay.selectedStep.href}
+              >
+                {replay.selectedStep.action}
+              </Link>
             </div>
-            <ol className="mt-4 space-y-2">
-              {replay.steps.map((step) => (
-                <li className={replayStepClassName(step)} key={step.id}>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <Link
+                className="rounded-md border border-emerald-200 bg-white px-3 py-2 text-center text-sm font-semibold text-emerald-900"
+                href={replay.selectedStep.previousHref}
+              >
+                Previous
+              </Link>
+              <Link
+                className="rounded-md border border-emerald-200 bg-white px-3 py-2 text-center text-sm font-semibold text-emerald-900"
+                href={replay.selectedStep.nextHref}
+              >
+                Next
+              </Link>
+            </div>
+          </div>
+          <ol className="min-h-0 flex-1 space-y-2 overflow-y-auto">
+            {replay.steps.map((step) => (
+              <li className={replayStepClassName(step)} key={step.id}>
+                <Link
+                  aria-current={step.isSelected ? "step" : undefined}
+                  className="min-w-0 underline-offset-4 hover:underline"
+                  href={`/?step=${step.id}`}
+                >
+                  <span className="block truncate font-semibold">{step.title}</span>
+                  <span className="text-xs text-neutral-500">{step.role}</span>
+                </Link>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className={replayStatusClassName(step)}>{step.status}</span>
                   <Link
-                    aria-current={step.isSelected ? "step" : undefined}
-                    className="min-w-0 underline-offset-4 hover:underline"
-                    href={`/?step=${step.id}`}
+                    className="rounded-md border border-neutral-200 px-2 py-1 text-xs font-semibold text-neutral-700"
+                    href={step.href}
                   >
-                    <span className="block truncate font-semibold">{step.title}</span>
-                    <span className="text-xs text-neutral-500">{step.role}</span>
+                    Open
                   </Link>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <span className={replayStatusClassName(step)}>{step.status}</span>
-                    <Link
-                      className="rounded-md border border-neutral-200 px-2 py-1 text-xs font-semibold text-neutral-700"
-                      href={step.href}
-                    >
-                      Open
-                    </Link>
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </div>
-          <div className="rounded-lg border border-neutral-300 bg-neutral-950 p-6 text-white">
-            <p className="text-sm uppercase tracking-wide text-emerald-300">Golden Query</p>
-            <p className="mt-3 text-2xl font-semibold">
-              What should we promote for Father’s Day based on margin, inventory, and conversion?
-            </p>
-          </div>
-          <div className="rounded-lg border border-neutral-300 bg-white p-6">
-            <p className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
-              Fixture Campaigns
-            </p>
-            <div className="mt-4 space-y-3">
-              {[fatherDayCampaign, secretSantaCampaign].map((campaign) => (
-                <div className="rounded-md border border-neutral-200 p-4" key={campaign.id}>
-                  <p className="font-semibold">{campaign.name}</p>
-                  <p className="mt-1 text-sm text-neutral-600">{campaign.summary}</p>
                 </div>
-              ))}
+              </li>
+            ))}
+          </ol>
+        </div>
+        <aside className="flex min-h-[calc(100vh-3rem)] min-w-0 flex-col gap-4">
+          <div className="flex-1 rounded-lg border border-neutral-900 bg-neutral-950 p-4 text-white shadow-sm lg:p-5">
+            <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">
+                  {replay.captureFrame.eyebrow}
+                </p>
+                <h2 className="mt-1 text-xl font-semibold">{replay.captureFrame.storefrontName}</h2>
+              </div>
+              <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-neutral-950">
+                {replay.captureFrame.statusLabel}
+              </span>
             </div>
-          </div>
-          <div className="rounded-lg border border-neutral-300 bg-white p-6">
-            <p className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
-              Seed Catalog
+            <div className="mt-4 overflow-hidden rounded-lg border border-white/10 bg-[#f8f4ed] text-neutral-950">
+              <div className="flex items-center justify-between border-b border-neutral-200 bg-white px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full bg-rose-400" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                </div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                  {replay.captureFrame.stepLabel}
+                </p>
+              </div>
+              <div className="grid gap-4 p-5 md:grid-cols-[0.9fr_1.1fr]">
+                <div className="rounded-md border border-neutral-200 bg-white p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                    {replay.captureFrame.role}
+                  </p>
+                  <h3 className="mt-2 text-2xl font-semibold leading-tight">
+                    {replay.captureFrame.title}
+                  </h3>
+                  <p className="mt-3 text-sm leading-6 text-neutral-700">
+                    {replay.captureFrame.body}
+                  </p>
+                  <Link
+                    className="mt-4 inline-flex rounded-md bg-neutral-950 px-3 py-2 text-sm font-semibold text-white"
+                    href={replay.captureFrame.primaryAction.href}
+                  >
+                    {replay.captureFrame.primaryAction.label}
+                  </Link>
+                </div>
+                <div className="grid content-between gap-3 rounded-md border border-neutral-200 bg-neutral-100 p-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                      Active storefront
+                    </p>
+                    <p className="mt-2 text-3xl font-semibold leading-tight">
+                      {replay.captureFrame.storefrontName}
+                    </p>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    {replay.captureFrame.roleLinks.map((roleLink) => (
+                      <Link
+                        className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-center text-sm font-semibold"
+                        href={roleLink.href}
+                        key={roleLink.label}
+                      >
+                        {roleLink.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p className="mt-4 text-sm leading-6 text-neutral-300">
+              Run the Manager insight, Operator activation, Time Machine comparison, and Guest
+              storefront from one replayable path.
             </p>
-            <p className="mt-3 text-3xl font-semibold">{products.length} products</p>
           </div>
+          <AuthPanel currentUser={currentUser} />
         </aside>
+      </section>
+      <section className="mx-auto grid max-w-7xl gap-4 px-5 pb-8 lg:grid-cols-3 lg:px-8">
+        <div className="rounded-lg border border-neutral-300 bg-neutral-950 p-6 text-white">
+          <p className="text-sm uppercase tracking-wide text-emerald-300">Golden Query</p>
+          <p className="mt-3 text-2xl font-semibold">
+            What should we promote for Father’s Day based on margin, inventory, and conversion?
+          </p>
+        </div>
+        <div className="rounded-lg border border-neutral-300 bg-white p-6">
+          <p className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
+            Fixture Campaigns
+          </p>
+          <div className="mt-4 space-y-3">
+            {[fatherDayCampaign, secretSantaCampaign].map((campaign) => (
+              <div className="rounded-md border border-neutral-200 p-4" key={campaign.id}>
+                <p className="font-semibold">{campaign.name}</p>
+                <p className="mt-1 text-sm text-neutral-600">{campaign.summary}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="rounded-lg border border-neutral-300 bg-white p-6">
+          <p className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
+            Seed Catalog
+          </p>
+          <p className="mt-3 text-3xl font-semibold">{products.length} products</p>
+        </div>
       </section>
     </main>
   );

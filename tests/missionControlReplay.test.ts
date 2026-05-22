@@ -218,6 +218,36 @@ describe("Mission Control replay", () => {
       }).selectedStep.nextHref,
     ).toBe("/?step=guest-preview");
   });
+
+  it("builds a capture frame from the selected replay step and active storefront", () => {
+    const replay = buildMissionControlReplay({
+      traces: [fatherDayTrace],
+      proposals: [],
+      storefrontConfigs: [],
+      publishedVersions: [],
+      activeVersionId: null,
+      selectedStepId: "operator-proposal",
+    });
+
+    expect(replay.captureFrame).toEqual({
+      eyebrow: "Capture frame",
+      stepLabel: "Step 2 of 6",
+      statusLabel: "Current",
+      storefrontName: "Baseline Atlas & Co.",
+      role: "Store Operator",
+      title: "Generate Father’s Day proposal",
+      body: "Turn the approved Manager insight into a fixture-backed campaign proposal.",
+      primaryAction: {
+        label: "Open Store Operator",
+        href: "/operator",
+      },
+      roleLinks: [
+        { label: "Manager", href: "/manager" },
+        { label: "Operator", href: "/operator" },
+        { label: "Guest", href: "/store" },
+      ],
+    });
+  });
 });
 
 const fatherDayTrace = {

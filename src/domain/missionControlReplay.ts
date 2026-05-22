@@ -26,6 +26,7 @@ export type MissionControlReplay = {
   nextAction: string;
   activeVersionName: string;
   selectedStep: MissionControlReplaySelectedStep;
+  captureFrame: MissionControlReplayCaptureFrame;
   steps: MissionControlReplayStep[];
 };
 
@@ -38,6 +39,24 @@ export type MissionControlReplaySelectedStep = {
   href: string;
   previousHref: string;
   nextHref: string;
+};
+
+export type MissionControlReplayCaptureFrame = {
+  eyebrow: string;
+  stepLabel: string;
+  statusLabel: string;
+  storefrontName: string;
+  role: MissionControlReplayStep["role"];
+  title: string;
+  body: string;
+  primaryAction: {
+    label: string;
+    href: string;
+  };
+  roleLinks: {
+    label: "Manager" | "Operator" | "Guest";
+    href: string;
+  }[];
 };
 
 export function buildMissionControlReplay(input: {
@@ -143,6 +162,24 @@ export function buildMissionControlReplay(input: {
       previousHref: homeReplayStepHref(previousStep.id),
       nextHref: homeReplayStepHref(nextStep.id),
     },
+    captureFrame: {
+      eyebrow: "Capture frame",
+      stepLabel: `Step ${selectedStepIndex + 1} of ${replaySteps.length}`,
+      statusLabel: formatStatusLabel(selectedStep.status),
+      storefrontName: activeVersion?.config.versionName ?? "Baseline Atlas & Co.",
+      role: selectedStep.role,
+      title: selectedStep.title,
+      body: captureFrameBodyFor(selectedStep.id),
+      primaryAction: {
+        label: `Open ${selectedStep.role}`,
+        href: selectedStep.href,
+      },
+      roleLinks: [
+        { label: "Manager", href: "/manager" },
+        { label: "Operator", href: "/operator" },
+        { label: "Guest", href: "/store" },
+      ],
+    },
     steps: stepsWithSelection,
   };
 }
@@ -166,6 +203,27 @@ function replayStep(input: {
 
 function homeReplayStepHref(stepId: MissionControlReplayStep["id"]): string {
   return `/?step=${stepId}`;
+}
+
+function formatStatusLabel(status: MissionControlReplayStatus): string {
+  return status[0].toUpperCase() + status.slice(1);
+}
+
+function captureFrameBodyFor(stepId: MissionControlReplayStep["id"]): string {
+  switch (stepId) {
+    case "manager-insight":
+      return "Ask the Father’s Day golden query and show the validated Codex metrics trace.";
+    case "operator-proposal":
+      return "Turn the approved Manager insight into a fixture-backed campaign proposal.";
+    case "fathers-day-publish":
+      return "Publish the Father’s Day storefront and make the Guest experience inspectable.";
+    case "secret-santa-revamp":
+      return "Rewrite the campaign for office Secret Santa gifts under £50.";
+    case "secret-santa-publish":
+      return "Publish the seasonal revamp and preserve version history for comparison.";
+    case "guest-preview":
+      return "Open the active Guest storefront as the final Loom proof point.";
+  }
 }
 
 function findSelectedStepIndex(steps: MissionControlReplayStep[], selectedStepId?: string | null) {
