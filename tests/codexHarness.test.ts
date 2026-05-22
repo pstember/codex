@@ -40,6 +40,32 @@ describe("fixture Codex harness", () => {
     expect(storefrontConfigSchema.parse(storefront).style.theme).toBe("holiday");
   });
 
+  it("generates query and insight fixtures for the approved Manager metric questions", async () => {
+    const query = await fixtureCodexHarness.generateGraphQLQuery(
+      "Which products have high inventory but are underexposed on the storefront?",
+    );
+    const insight = await fixtureCodexHarness.summarizeInsight(
+      "Which products have high inventory but are underexposed on the storefront?",
+    );
+
+    expect(generatedQuerySchema.parse(query).operationName).toBe(
+      "UnderexposedHighInventoryProducts",
+    );
+    expect(insightSummarySchema.parse(insight).recommendedProductIds).toContain(
+      "desk-organizer-tray",
+    );
+  });
+
+  it("summarizes Secret Santa insight when asked directly", async () => {
+    const insight = await fixtureCodexHarness.summarizeInsight(
+      "Turn the Father’s Day campaign into a Secret Santa campaign under £50.",
+    );
+
+    expect(insightSummarySchema.parse(insight).recommendedProductIds).toContain(
+      "pour-over-coffee-set",
+    );
+  });
+
   it("generates a Secret Santa query fixture when the question asks for the seasonal revamp", async () => {
     const result = await fixtureCodexHarness.generateGraphQLQuery(
       "Turn the Father’s Day campaign into a Secret Santa campaign under £50.",

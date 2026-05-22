@@ -26,15 +26,18 @@ Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot w
 - Rendered the Father’s Day golden question, Codex trace status, chart mapping, recommendations, and risk exclusions on the Manager page.
 - Added SQLite persistence for Metrics Copilot traces.
 - Added a Manager `Run analysis` action that saves an approved golden-query trace and refreshes the saved-runs panel.
+- Expanded the Manager Metrics Copilot form to the five approved metric golden questions.
+- Added saved-run detail rendering with generated GraphQL, validation status/errors, rationale, recommended products, and timestamp.
+- Switched local Next dev/build scripts to webpack because Turbopack currently fails to load `node:sqlite`.
 
 ## Test Status
 
 - `npm run typecheck`: passing.
 - `npm run lint`: passing.
-- `npm test`: passing, 8 files and 24 tests.
-- `npm run coverage`: passing, 85.18% lines and 85.61% statements.
-- `npm run build`: passing.
-- Browser smoke test: passing for Manager Metrics Copilot content and saved-run creation at `http://localhost:3000/manager`.
+- `npm test`: passing, 8 files and 28 tests.
+- `npm run coverage`: passing, 87.97% lines, 88.27% statements, and 82.22% branches.
+- `npm run build`: passing with `next build --webpack`.
+- Browser smoke test: passing for the main page after dev-server restart and for Manager Metrics Copilot question selection, saved-run creation, and trace detail rendering at `http://localhost:3000/manager`.
 
 ## Dependency Status
 
@@ -52,9 +55,9 @@ Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot w
 - UI is functional for auth/navigation and the first Manager Metrics Copilot slice, but not the final mission-control experience.
 - Login failure currently redirects back home without a visible inline error.
 - Phase 1 auth is demo-grade and intentionally not a production auth provider.
-- Metrics Copilot traces persist, but there is only one approved question and no saved-run detail drilldown yet.
+- Metrics Copilot traces persist for the approved Manager metric questions, with trace detail drilldown now available.
 - Storefront remains baseline only; campaign publishing and Time Machine are future phases.
 
 ## Next Recommended Task
 
-Continue Phase 1 by expanding the Manager question form to the remaining approved golden queries and rendering per-run trace details.
+Continue Phase 1 by adding chart/data-result mapping for Metrics Copilot answers and tightening the Manager UI polish around saved-run comparison.

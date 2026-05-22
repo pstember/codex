@@ -7,7 +7,7 @@ import { getCurrentUser } from "@/app/auth/session";
 import { requirePermission } from "@/domain/auth";
 import {
   answerAndSaveMetricsQuestion,
-  fatherDayMetricsQuestion,
+  approvedMetricsQuestions,
   isApprovedMetricsQuestion,
 } from "@/domain/metricsCopilot";
 import { products } from "@/fixtures/products";
@@ -23,14 +23,16 @@ export async function runMetricsQuestionAction(formData: FormData) {
 
   requirePermission(user, "ask_deep_metrics");
 
-  const question = String(formData.get("question") ?? fatherDayMetricsQuestion);
+  const question = String(formData.get("question") ?? approvedMetricsQuestions[0]);
 
   if (!isApprovedMetricsQuestion(question)) {
     throw new Error("Metrics question is not approved for this demo.");
   }
 
+  const traceId = randomUUID();
+
   await answerAndSaveMetricsQuestion({
-    id: randomUUID(),
+    id: traceId,
     question,
     harness: fixtureCodexHarness,
     products,
@@ -40,5 +42,5 @@ export async function runMetricsQuestionAction(formData: FormData) {
   });
 
   revalidatePath("/manager");
-  redirect("/manager");
+  redirect(`/manager?run=${traceId}`);
 }

@@ -1,32 +1,73 @@
 import { requireCurrentUser } from "@/app/auth/session";
 import { AppChrome } from "@/app/components/AppChrome";
 import { runMetricsQuestionAction } from "@/app/manager/actions";
-import { answerMetricsQuestion, fatherDayMetricsQuestion } from "@/domain/metricsCopilot";
+import {
+  answerMetricsQuestion,
+  approvedMetricsQuestions,
+  isApprovedMetricsQuestion,
+} from "@/domain/metricsCopilot";
 import { products } from "@/fixtures/products";
 import { fixtureCodexHarness } from "@/harness/codexHarness";
 import { getAppDatabase } from "@/persistence/appDatabase";
 
-export default async function ManagerPage() {
+export default async function ManagerPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ question?: string; run?: string }>;
+}) {
   const user = await requireCurrentUser("ask_deep_metrics");
+  const params = await searchParams;
+  const requestedQuestion = params?.question;
+  const selectedQuestion =
+    requestedQuestion && isApprovedMetricsQuestion(requestedQuestion)
+      ? requestedQuestion
+      : approvedMetricsQuestions[0];
   const answer = await answerMetricsQuestion({
-    question: fatherDayMetricsQuestion,
+    question: selectedQuestion,
     harness: fixtureCodexHarness,
     products,
   });
-  const savedTraces = getAppDatabase().listRecentMetricsTraces();
+  const database = getAppDatabase();
+  const savedTraces = database.listRecentMetricsTraces();
+  const selectedTrace =
+    (params?.run ? database.findMetricsTraceById(params.run) : null) ?? savedTraces[0] ?? null;
+  const selectedTraceAnswer = selectedTrace
+    ? await answerMetricsQuestion({
+        question: selectedTrace.question,
+        harness: fixtureCodexHarness,
+        products,
+      })
+    : null;
+  const selectedTraceGraphql =
+    selectedTrace?.generatedGraphql || selectedTraceAnswer?.trace.generatedQuery.query || "";
+  const selectedTraceRationale =
+    selectedTrace?.rationale || selectedTraceAnswer?.trace.generatedQuery.rationale || "";
+  const recommendedProductsById = new Map(products.map((product) => [product.id, product]));
 
   return (
     <AppChrome eyebrow="Store Manager" title="Metrics command center" user={user}>
       <section className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
         <div className="rounded-lg border border-neutral-300 bg-white p-6">
-          <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">
-            Golden question
-          </p>
+          <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">Question</p>
           <h2 className="mt-3 text-2xl font-semibold">{answer.question}</h2>
           <p className="mt-4 text-base leading-7 text-neutral-700">{answer.insight.summary}</p>
 
           <form action={runMetricsQuestionAction} className="mt-5 flex flex-wrap gap-3">
-            <input name="question" type="hidden" value={answer.question} />
+            <label className="sr-only" htmlFor="metrics-question">
+              Metrics question
+            </label>
+            <select
+              className="min-w-0 flex-1 rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm"
+              defaultValue={answer.question}
+              id="metrics-question"
+              name="question"
+            >
+              {approvedMetricsQuestions.map((question) => (
+                <option key={question} value={question}>
+                  {question}
+                </option>
+              ))}
+            </select>
             <button
               className="rounded-md bg-neutral-950 px-4 py-2 text-sm font-semibold text-white"
               type="submit"
@@ -103,7 +144,12 @@ export default async function ManagerPage() {
               <ol className="mt-4 space-y-3 text-sm">
                 {savedTraces.map((trace) => (
                   <li className="rounded-md border border-neutral-200 p-3" key={trace.id}>
-                    <p className="font-medium">{trace.operationName}</p>
+                    <a
+                      className="font-medium underline-offset-4 hover:underline"
+                      href={`/manager?run=${trace.id}`}
+                    >
+                      {trace.operationName}
+                    </a>
                     <p className="mt-1 text-neutral-600">
                       {trace.validationStatus} · {trace.chartType} ·{" "}
                       {trace.recommendedProductIds.length} products
@@ -117,6 +163,57 @@ export default async function ManagerPage() {
               </p>
             )}
           </div>
+
+          {selectedTrace ? (
+            <div className="rounded-lg border border-neutral-300 bg-white p-6">
+              <p className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
+                Run detail
+              </p>
+              <dl className="mt-4 space-y-4 text-sm">
+                <div>
+                  <dt className="text-neutral-500">Question</dt>
+                  <dd className="mt-1 font-medium text-neutral-900">{selectedTrace.question}</dd>
+                </div>
+                <div>
+                  <dt className="text-neutral-500">Timestamp</dt>
+                  <dd className="mt-1 text-neutral-900">
+                    {selectedTrace.createdAt.toLocaleString("en-GB")}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-neutral-500">Validation</dt>
+                  <dd className="mt-1 capitalize text-neutral-900">
+                    {selectedTrace.validationStatus}
+                  </dd>
+                  {selectedTrace.validationErrors.length > 0 ? (
+                    <ul className="mt-2 space-y-1 text-red-700">
+                      {selectedTrace.validationErrors.map((error) => (
+                        <li key={error}>{error}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+                <div>
+                  <dt className="text-neutral-500">Rationale</dt>
+                  <dd className="mt-1 leading-6 text-neutral-900">{selectedTraceRationale}</dd>
+                </div>
+                <div>
+                  <dt className="text-neutral-500">Recommended products</dt>
+                  <dd className="mt-1 text-neutral-900">
+                    {selectedTrace.recommendedProductIds
+                      .map((productId) => recommendedProductsById.get(productId)?.name ?? productId)
+                      .join(", ")}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-neutral-500">Generated GraphQL</dt>
+                  <dd className="mt-2 overflow-x-auto rounded-md bg-neutral-950 p-3">
+                    <pre className="text-xs leading-5 text-neutral-50">{selectedTraceGraphql}</pre>
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          ) : null}
         </aside>
       </section>
     </AppChrome>

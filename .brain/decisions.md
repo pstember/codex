@@ -35,3 +35,9 @@ Rationale: saved traces are central to the demo story, but constraining input ke
 Commit completed, tested slices as work progresses instead of letting large unstaged diffs accumulate.
 
 Rationale: frequent checkpoints make it easier to inspect, bisect, or revert a specific change without discarding later useful work.
+
+## 2026-05-22 - Webpack Next server for SQLite
+
+Use `next dev --webpack` and `next build --webpack` while the app depends on Node's built-in `node:sqlite`.
+
+Rationale: Next 16 Turbopack currently fails to load `node:sqlite` in this app, while the deterministic local demo needs SQLite persistence available during development and builds.

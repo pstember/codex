@@ -27,3 +27,7 @@ Use SQLite for local persistence because it is portable, easy to seed, and suita
 ## 2026-05-22: Lightweight Demo Auth
 
 Use app-native demo login with three seeded accounts: `manager@demo.com`, `operator@demo.com`, and `guest@demo.com`. Persist sessions in SQLite and protect Manager/Operator routes and server actions with role permissions. External auth providers remain deferred to keep the hackathon demo reliable.
+
+## 2026-05-22: Webpack Next Server For SQLite
+
+Run `next dev --webpack` and `next build --webpack` because Next 16 Turbopack currently fails to load Node's built-in `node:sqlite` module in this app.

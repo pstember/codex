@@ -1,8 +1,12 @@
-import { DatabaseSync } from "node:sqlite";
+import { createRequire } from "node:module";
 import type { AuthStore } from "@/domain/auth";
 import type { MetricsTrace } from "@/domain/metricsTrace";
 import type { Product } from "@/domain/product";
 import type { AuthenticatedUser, User } from "@/domain/users";
+
+const { DatabaseSync } = createRequire(import.meta.url)(
+  "node:sqlite",
+) as typeof import("node:sqlite");
 
 export interface CommerceDatabase extends AuthStore {
   close(): void;
@@ -12,6 +16,7 @@ export interface CommerceDatabase extends AuthStore {
   countUsers(): number;
   saveMetricsTrace(trace: MetricsTrace): void;
   listRecentMetricsTraces(limit?: number): MetricsTrace[];
+  findMetricsTraceById(id: string): MetricsTrace | null;
 }
 
 export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
@@ -48,12 +53,36 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
       question TEXT NOT NULL,
       operation_name TEXT NOT NULL,
       validation_status TEXT NOT NULL,
+      validation_errors_json TEXT NOT NULL DEFAULT '[]',
+      generated_graphql TEXT NOT NULL DEFAULT '',
+      rationale TEXT NOT NULL DEFAULT '',
       chart_type TEXT NOT NULL,
       recommended_product_ids_json TEXT NOT NULL,
       created_by_user_id TEXT NOT NULL,
       created_at TEXT NOT NULL
     );
   `);
+
+  const metricTraceColumns = database.prepare("PRAGMA table_info(metrics_traces);").all() as Array<{
+    name: string;
+  }>;
+  const metricTraceColumnNames = new Set(metricTraceColumns.map((column) => column.name));
+
+  if (!metricTraceColumnNames.has("validation_errors_json")) {
+    database.exec(
+      "ALTER TABLE metrics_traces ADD COLUMN validation_errors_json TEXT NOT NULL DEFAULT '[]';",
+    );
+  }
+
+  if (!metricTraceColumnNames.has("generated_graphql")) {
+    database.exec(
+      "ALTER TABLE metrics_traces ADD COLUMN generated_graphql TEXT NOT NULL DEFAULT '';",
+    );
+  }
+
+  if (!metricTraceColumnNames.has("rationale")) {
+    database.exec("ALTER TABLE metrics_traces ADD COLUMN rationale TEXT NOT NULL DEFAULT '';");
+  }
 
   const insertProduct = database.prepare(`
     INSERT INTO products (
@@ -120,16 +149,22 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
       question,
       operation_name,
       validation_status,
+      validation_errors_json,
+      generated_graphql,
+      rationale,
       chart_type,
       recommended_product_ids_json,
       created_by_user_id,
       created_at
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       question = excluded.question,
       operation_name = excluded.operation_name,
       validation_status = excluded.validation_status,
+      validation_errors_json = excluded.validation_errors_json,
+      generated_graphql = excluded.generated_graphql,
+      rationale = excluded.rationale,
       chart_type = excluded.chart_type,
       recommended_product_ids_json = excluded.recommended_product_ids_json,
       created_by_user_id = excluded.created_by_user_id,
@@ -142,6 +177,9 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
       question,
       operation_name AS operationName,
       validation_status AS validationStatus,
+      validation_errors_json AS validationErrorsJson,
+      generated_graphql AS generatedGraphql,
+      rationale,
       chart_type AS chartType,
       recommended_product_ids_json AS recommendedProductIdsJson,
       created_by_user_id AS createdByUserId,
@@ -150,6 +188,51 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
     ORDER BY created_at DESC
     LIMIT ?;
   `);
+
+  const findMetricsTrace = database.prepare(`
+    SELECT
+      id,
+      question,
+      operation_name AS operationName,
+      validation_status AS validationStatus,
+      validation_errors_json AS validationErrorsJson,
+      generated_graphql AS generatedGraphql,
+      rationale,
+      chart_type AS chartType,
+      recommended_product_ids_json AS recommendedProductIdsJson,
+      created_by_user_id AS createdByUserId,
+      created_at AS createdAt
+    FROM metrics_traces
+    WHERE id = ?;
+  `);
+
+  function parseMetricsTraceRow(row: {
+    id: string;
+    question: string;
+    operationName: string;
+    validationStatus: MetricsTrace["validationStatus"];
+    validationErrorsJson: string;
+    generatedGraphql: string;
+    rationale: string;
+    chartType: MetricsTrace["chartType"];
+    recommendedProductIdsJson: string;
+    createdByUserId: string;
+    createdAt: string;
+  }): MetricsTrace {
+    return {
+      id: row.id,
+      question: row.question,
+      operationName: row.operationName,
+      validationStatus: row.validationStatus,
+      validationErrors: JSON.parse(row.validationErrorsJson) as string[],
+      generatedGraphql: row.generatedGraphql,
+      rationale: row.rationale,
+      chartType: row.chartType,
+      recommendedProductIds: JSON.parse(row.recommendedProductIdsJson) as string[],
+      createdByUserId: row.createdByUserId,
+      createdAt: new Date(row.createdAt),
+    };
+  }
 
   return {
     close() {
@@ -244,6 +327,9 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
         trace.question,
         trace.operationName,
         trace.validationStatus,
+        JSON.stringify(trace.validationErrors),
+        trace.generatedGraphql,
+        trace.rationale,
         trace.chartType,
         JSON.stringify(trace.recommendedProductIds),
         trace.createdByUserId,
@@ -256,22 +342,23 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
         question: string;
         operationName: string;
         validationStatus: MetricsTrace["validationStatus"];
+        validationErrorsJson: string;
+        generatedGraphql: string;
+        rationale: string;
         chartType: MetricsTrace["chartType"];
         recommendedProductIdsJson: string;
         createdByUserId: string;
         createdAt: string;
       }>;
 
-      return rows.map((row) => ({
-        id: row.id,
-        question: row.question,
-        operationName: row.operationName,
-        validationStatus: row.validationStatus,
-        chartType: row.chartType,
-        recommendedProductIds: JSON.parse(row.recommendedProductIdsJson) as string[],
-        createdByUserId: row.createdByUserId,
-        createdAt: new Date(row.createdAt),
-      }));
+      return rows.map(parseMetricsTraceRow);
+    },
+    findMetricsTraceById(id) {
+      const row = findMetricsTrace.get(id) as
+        | Parameters<typeof parseMetricsTraceRow>[0]
+        | undefined;
+
+      return row ? parseMetricsTraceRow(row) : null;
     },
   };
 }

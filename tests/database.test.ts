@@ -56,6 +56,9 @@ describe("commerce SQLite database", () => {
         question: "What should we promote for Father’s Day?",
         operationName: "FatherDayPromotionCandidates",
         validationStatus: "valid",
+        validationErrors: [],
+        generatedGraphql: "query FatherDayPromotionCandidates { products { id } }",
+        rationale: "Rank products by margin, inventory, and conversion.",
         chartType: "productTable",
         recommendedProductIds: ["portable-charcoal-grill"],
         createdByUserId: "demo-manager",
@@ -68,12 +71,28 @@ describe("commerce SQLite database", () => {
           question: "What should we promote for Father’s Day?",
           operationName: "FatherDayPromotionCandidates",
           validationStatus: "valid",
+          validationErrors: [],
+          generatedGraphql: "query FatherDayPromotionCandidates { products { id } }",
+          rationale: "Rank products by margin, inventory, and conversion.",
           chartType: "productTable",
           recommendedProductIds: ["portable-charcoal-grill"],
           createdByUserId: "demo-manager",
           createdAt: new Date("2026-05-22T10:00:00.000Z"),
         },
       ]);
+      expect(database.findMetricsTraceById("trace-1")).toEqual({
+        id: "trace-1",
+        question: "What should we promote for Father’s Day?",
+        operationName: "FatherDayPromotionCandidates",
+        validationStatus: "valid",
+        validationErrors: [],
+        generatedGraphql: "query FatherDayPromotionCandidates { products { id } }",
+        rationale: "Rank products by margin, inventory, and conversion.",
+        chartType: "productTable",
+        recommendedProductIds: ["portable-charcoal-grill"],
+        createdByUserId: "demo-manager",
+        createdAt: new Date("2026-05-22T10:00:00.000Z"),
+      });
     } finally {
       database.close();
     }

@@ -7,7 +7,21 @@ import type { CodexHarness } from "@/harness/codexHarness";
 export const fatherDayMetricsQuestion =
   "What should we promote for Father’s Day based on margin, inventory, and conversion?";
 
-export const approvedMetricsQuestions = [fatherDayMetricsQuestion] as const;
+export const underexposedInventoryQuestion =
+  "Which products have high inventory but are underexposed on the storefront?";
+export const mobileConversionDropQuestion = "Why did mobile conversion drop last week?";
+export const fatherDayBundleQuestion =
+  "What bundle would increase average order value for Father’s Day shoppers?";
+export const promotionRiskQuestion =
+  "Which products should we avoid promoting because of low margin, low stock, or high returns?";
+
+export const approvedMetricsQuestions = [
+  fatherDayMetricsQuestion,
+  underexposedInventoryQuestion,
+  mobileConversionDropQuestion,
+  fatherDayBundleQuestion,
+  promotionRiskQuestion,
+] as const;
 
 export type MetricsCopilotChart = {
   type: GeneratedQuery["recommendedChart"];
@@ -76,6 +90,10 @@ export async function answerAndSaveMetricsQuestion(input: {
     question: answer.question,
     operationName: answer.trace.generatedQuery.operationName,
     validationStatus: answer.trace.validation.status,
+    validationErrors:
+      answer.trace.validation.status === "invalid" ? answer.trace.validation.errors : [],
+    generatedGraphql: answer.trace.generatedQuery.query,
+    rationale: answer.trace.generatedQuery.rationale,
     chartType: answer.chart.type,
     recommendedProductIds: answer.recommendedProducts.map((product) => product.id),
     createdByUserId: input.createdByUserId,
