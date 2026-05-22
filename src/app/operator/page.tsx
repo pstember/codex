@@ -6,7 +6,9 @@ import {
   publishStorefrontConfigAction,
   rollbackStorefrontVersionAction,
 } from "@/app/operator/actions";
+import { compareStorefrontVersions } from "@/domain/storefrontPublishing";
 import { products } from "@/fixtures/products";
+import { baselineStorefront } from "@/fixtures/storefront";
 import { getAppDatabase } from "@/persistence/appDatabase";
 
 export default async function OperatorPage({
@@ -17,6 +19,7 @@ export default async function OperatorPage({
     proposal?: string;
     storefront?: string;
     version?: string;
+    compare?: string;
   }>;
 }) {
   const user = await requireCurrentUser("publish_storefront");
@@ -27,6 +30,32 @@ export default async function OperatorPage({
   const storefrontConfigs = database.listRecentStorefrontConfigs();
   const publishedVersions = database.listPublishedStorefrontVersions();
   const activeVersion = database.findActiveStorefrontVersion();
+  const selectedTimeMachineVersion =
+    params?.version === "baseline"
+      ? null
+      : ((params?.version ? database.findPublishedStorefrontVersionById(params.version) : null) ??
+        activeVersion ??
+        publishedVersions[0] ??
+        null);
+  const selectedTimeMachineConfig =
+    params?.version === "baseline"
+      ? baselineStorefront
+      : (selectedTimeMachineVersion?.config ?? baselineStorefront);
+  const selectedTimeMachineValue =
+    params?.version === "baseline" ? "baseline" : (selectedTimeMachineVersion?.id ?? "baseline");
+  const comparisonBaseVersion =
+    params?.compare && params.compare !== "baseline"
+      ? database.findPublishedStorefrontVersionById(params.compare)
+      : null;
+  const comparisonBaseConfig =
+    params?.compare === "baseline" || !comparisonBaseVersion
+      ? baselineStorefront
+      : comparisonBaseVersion.config;
+  const comparisonBaseValue = comparisonBaseVersion?.id ?? "baseline";
+  const timeMachineComparison = compareStorefrontVersions({
+    base: comparisonBaseConfig,
+    selected: selectedTimeMachineConfig,
+  });
   const selectedTrace =
     (params?.trace ? database.findMetricsTraceById(params.trace) : null) ?? traces[0] ?? null;
   const selectedProposal =
@@ -296,6 +325,92 @@ export default async function OperatorPage({
                 Open Guest storefront
               </a>
             </div>
+            <form className="mt-5 grid gap-3 text-sm sm:grid-cols-[1fr_1fr_auto]" method="get">
+              <label className="grid gap-2 font-semibold text-neutral-900">
+                Selected version
+                <select
+                  className="rounded-md border border-neutral-300 bg-white px-3 py-2 font-normal text-neutral-900"
+                  defaultValue={selectedTimeMachineValue}
+                  name="version"
+                >
+                  <option value="baseline">Baseline Atlas & Co.</option>
+                  {publishedVersions.map((version) => (
+                    <option key={version.id} value={version.id}>
+                      {version.config.versionName} ({version.status})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="grid gap-2 font-semibold text-neutral-900">
+                Compare with
+                <select
+                  className="rounded-md border border-neutral-300 bg-white px-3 py-2 font-normal text-neutral-900"
+                  defaultValue={comparisonBaseValue}
+                  name="compare"
+                >
+                  <option value="baseline">Baseline Atlas & Co.</option>
+                  {publishedVersions.map((version) => (
+                    <option key={version.id} value={version.id}>
+                      {version.config.versionName} ({version.status})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                className="self-end rounded-md bg-neutral-950 px-4 py-2 font-semibold text-white"
+                type="submit"
+              >
+                Compare
+              </button>
+            </form>
+            <div className="mt-5 grid gap-4 lg:grid-cols-3">
+              <article className="rounded-md border border-neutral-200 p-4">
+                <h3 className="text-sm font-semibold text-neutral-900">Version delta</h3>
+                <p className="mt-2 text-sm leading-6 text-neutral-700">
+                  {timeMachineComparison.baseVersionName} to{" "}
+                  {timeMachineComparison.selectedVersionName}
+                </p>
+                <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                  {timeMachineComparison.campaignChanged ? "Campaign changed" : "Same campaign"}
+                </p>
+              </article>
+              <article className="rounded-md border border-neutral-200 p-4">
+                <h3 className="text-sm font-semibold text-neutral-900">Style changes</h3>
+                {timeMachineComparison.styleChanges.length > 0 ? (
+                  <ul className="mt-2 space-y-1 text-sm leading-6 text-neutral-700">
+                    {timeMachineComparison.styleChanges.map((change) => (
+                      <li key={change.label}>
+                        {change.label}: {change.before} to {change.after}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-2 text-sm leading-6 text-neutral-600">No style changes.</p>
+                )}
+              </article>
+              <article className="rounded-md border border-neutral-200 p-4">
+                <h3 className="text-sm font-semibold text-neutral-900">Product changes</h3>
+                <p className="mt-2 text-sm leading-6 text-neutral-700">
+                  Added:{" "}
+                  {formatProductIds(timeMachineComparison.productChanges.added, productsById)}
+                </p>
+                <p className="mt-1 text-sm leading-6 text-neutral-700">
+                  Removed:{" "}
+                  {formatProductIds(timeMachineComparison.productChanges.removed, productsById)}
+                </p>
+              </article>
+            </div>
+            <div className="mt-4 rounded-md border border-neutral-200 p-4">
+              <h3 className="text-sm font-semibold text-neutral-900">Section changes</h3>
+              <div className="mt-3 grid gap-3 text-sm md:grid-cols-3">
+                <ChangeList items={timeMachineComparison.sectionChanges.added} label="Added" />
+                <ChangeList items={timeMachineComparison.sectionChanges.removed} label="Removed" />
+                <ChangeList
+                  items={timeMachineComparison.sectionChanges.unchanged}
+                  label="Unchanged"
+                />
+              </div>
+            </div>
             {publishedVersions.length > 0 ? (
               <ol className="mt-5 space-y-3 text-sm">
                 {publishedVersions.map((version) => (
@@ -352,4 +467,32 @@ export default async function OperatorPage({
       </section>
     </AppChrome>
   );
+}
+
+function ChangeList({ items, label }: { items: string[]; label: string }) {
+  return (
+    <div>
+      <p className="font-semibold text-neutral-900">{label}</p>
+      {items.length > 0 ? (
+        <ul className="mt-2 space-y-1 leading-6 text-neutral-700">
+          {items.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-2 leading-6 text-neutral-600">None</p>
+      )}
+    </div>
+  );
+}
+
+function formatProductIds(
+  productIds: string[],
+  productsById: Map<string, (typeof products)[number]>,
+) {
+  if (productIds.length === 0) {
+    return "None";
+  }
+
+  return productIds.map((productId) => productsById.get(productId)?.name ?? productId).join(", ");
 }

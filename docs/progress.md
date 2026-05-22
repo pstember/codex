@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot with GraphQL validation, chart mapping, saved traces, Operator handoff, fixture-backed campaign proposal generation, fixture-backed storefront config generation, publishing controls, Guest rendering, and rollback groundwork.
+Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot with GraphQL validation, chart mapping, saved traces, Operator handoff, fixture-backed campaign proposal generation, fixture-backed storefront config generation, publishing controls, Guest rendering, rollback groundwork, and Storefront Time Machine comparison.
 
 ## Completed
 
@@ -48,15 +48,17 @@ Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot w
 - Added Operator publish controls and a Storefront Time Machine panel with active-version status and rollback actions for inactive versions.
 - Updated the Guest storefront to render the active published version with baseline fallback and product placement details.
 - Extended the Playwright e2e smoke through publishing and Guest storefront rendering.
+- Expanded Storefront Time Machine with baseline/published version selectors and a tested comparison model for campaign, style, section, and product deltas.
+- Extended the Playwright e2e smoke to assert the visible Time Machine comparison panel after publishing.
 
 ## Test Status
 
 - `npm run typecheck`: passing.
 - `npm run lint`: passing.
-- `npm test`: passing, 11 files and 41 tests.
-- `npm run coverage`: passing, 90.17% statements, 90.47% lines, and 82.02% branches.
+- `npm test`: passing, 11 files and 42 tests.
+- `npm run coverage`: passing, 90.6% statements, 90.87% lines, and 82.02% branches.
 - `npm run build`: passing with `next build --webpack`.
-- Playwright e2e smoke: passing for Manager login, saved-run creation, Operator login, handoff selection, fixture-backed proposal generation, proposal approval, storefront config rendering, publishing, Time Machine active status, and Guest storefront rendering.
+- Playwright e2e smoke: passing for Manager login, saved-run creation, Operator login, handoff selection, fixture-backed proposal generation, proposal approval, storefront config rendering, publishing, Time Machine active status and comparison, and Guest storefront rendering.
 
 ## Dependency Status
 
@@ -80,4 +82,4 @@ Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot w
 
 ## Next Recommended Task
 
-Continue Phase 1 by expanding Storefront Time Machine comparison/version selection and then move toward Secret Santa campaign revamp groundwork.
+Continue Phase 1 by moving toward Secret Santa campaign revamp groundwork: copy rewrite, product reselection under £50, and validated seasonal storefront config generation.

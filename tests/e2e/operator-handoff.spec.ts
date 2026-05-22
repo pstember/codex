@@ -23,7 +23,7 @@ test("Operator generates a campaign proposal from the latest Manager metrics han
   await expect(
     page.getByRole("heading", { name: "Grill, Travel, and Everyday Carry" }),
   ).toBeVisible();
-  await expect(page.getByText("Portable Charcoal Grill")).toBeVisible();
+  await expect(page.getByRole("cell", { name: "Portable Charcoal Grill" })).toBeVisible();
   await expect(page.locator("span").filter({ hasText: "valid" })).toBeVisible();
 
   await page.getByRole("button", { name: "Approve proposal" }).click();
@@ -44,6 +44,10 @@ test("Operator generates a campaign proposal from the latest Manager metrics han
 
   await expect(page.getByText("Storefront Time Machine")).toBeVisible();
   await expect(page.getByText("Active Guest version: Father’s Day")).toBeVisible();
+  await expect(page.getByText("Version delta")).toBeVisible();
+  await expect(page.getByText("Baseline Atlas & Co. to Father’s Day")).toBeVisible();
+  await expect(page.getByText("Campaign changed")).toBeVisible();
+  await expect(page.getByText("Product changes")).toBeVisible();
 
   await page.getByRole("link", { name: "Open Guest storefront" }).click();
   await page.waitForURL("**/store");

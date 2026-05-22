@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 import type { GeneratedStorefrontConfig } from "@/domain/storefrontGeneration";
-import { publishStorefrontConfig, rollbackStorefrontVersion } from "@/domain/storefrontPublishing";
-import { fatherDayStorefront } from "@/fixtures/storefront";
+import {
+  compareStorefrontVersions,
+  publishStorefrontConfig,
+  rollbackStorefrontVersion,
+} from "@/domain/storefrontPublishing";
+import {
+  baselineStorefront,
+  fatherDayStorefront,
+  secretSantaStorefront,
+} from "@/fixtures/storefront";
 
 describe("storefront publishing", () => {
   it("publishes a valid generated config as the active Guest storefront version", () => {
@@ -82,6 +90,49 @@ describe("storefront publishing", () => {
       publishedAt: new Date("2026-05-22T16:00:00.000Z"),
     });
     expect(savedVersions).toEqual([version]);
+  });
+
+  it("compares a selected storefront version with another version for Time Machine review", () => {
+    expect(
+      compareStorefrontVersions({
+        base: baselineStorefront,
+        selected: secretSantaStorefront,
+      }),
+    ).toEqual({
+      baseVersionName: "Baseline Atlas & Co.",
+      selectedVersionName: "Secret Santa",
+      campaignChanged: true,
+      styleChanges: [
+        {
+          label: "Theme",
+          before: "heritage",
+          after: "holiday",
+        },
+        {
+          label: "Accent color",
+          before: "#0f766e",
+          after: "#be123c",
+        },
+        {
+          label: "Density",
+          before: "comfortable",
+          after: "compact",
+        },
+      ],
+      sectionChanges: {
+        added: [
+          "Secret Santa gifts under £50 that do not feel last-minute.",
+          "Safe bets under £50",
+        ],
+        removed: ["Curated goods for useful everyday rituals.", "Popular this week"],
+        unchanged: [],
+      },
+      productChanges: {
+        added: ["cast-iron-grill-press", "travel-grooming-kit"],
+        removed: [],
+        unchanged: ["desk-organizer-tray", "pour-over-coffee-set", "wireless-charging-valet"],
+      },
+    });
   });
 });
 
