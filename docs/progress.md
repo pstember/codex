@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot with GraphQL validation, chart mapping, saved traces, Operator handoff, fixture-backed campaign proposal generation, fixture-backed storefront config generation, publishing controls, Guest rendering, rollback groundwork, Storefront Time Machine comparison, Secret Santa visual prompts/assets, richer seasonal comparison, explicit Guest version selection, and Mission Control Demo Mode replay groundwork, controls, and split-screen command-center polish.
+Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot with GraphQL validation, chart mapping, saved traces, Operator handoff, fixture-backed campaign proposal generation, fixture-backed storefront config generation, publishing controls, Guest rendering, rollback groundwork, Storefront Time Machine comparison, Secret Santa visual prompts/assets, richer seasonal comparison, explicit Guest version selection, and Mission Control Demo Mode replay groundwork, controls, split-screen command-center polish, and Loom capture hardening.
 
 ## Completed
 
@@ -64,16 +64,19 @@ Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot w
 - Surfaced Mission Control Demo Mode on the home screen with replay checkpoints linking into Manager, Operator, and Guest views.
 - Added URL-driven Mission Control replay controls for selected checkpoints, previous/next clamping, selected-step status/action display, and preserved role-view links.
 - Added a tested Mission Control capture-frame model and reshaped the home screen into a split-screen Loom command center with a replay control lane, live-ish selected-step preview lane, active storefront state, and direct Manager/Operator/Guest links.
+- Added a tested Loom capture checklist model and home-screen checklist with stable capture links for the opening frame, Manager trace, Operator workspace, Time Machine, and Guest close.
+- Hardened the Playwright smoke to assert Mission Control capture checklist links after the full demo path and verify the Guest close link navigates to the active Secret Santa storefront.
+- Updated `docs/demo-script.md` with exact Mission Control replay URLs and capture handoff steps for a human Loom run.
 
 ## Test Status
 
 - `npm run typecheck`: passing.
 - `npm run lint`: passing.
-- `npm test`: passing, 12 files and 59 tests.
-- `npm run coverage`: passing, 91.5% statements, 91.53% lines, and 83.41% branches.
+- `npm test`: passing, 12 files and 60 tests.
+- `npm run coverage`: passing, 91.52% statements, 91.56% lines, and 83.87% branches.
 - `npm run build`: passing with `next build --webpack`.
-- Playwright e2e smoke: passing for Manager login, saved-run creation, Operator login, handoff selection, fixture-backed Father’s Day proposal generation, proposal approval, storefront config rendering, visual prompt review, publishing, Time Machine active status and strategic comparison, Secret Santa revamp, seasonal storefront config rendering, Secret Santa publishing, Guest active storefront rendering, and explicit inactive-version Guest preview.
-- Home page visual QA: passed for `?step=operator-proposal` at desktop and mobile widths with the split-screen replay lane, capture frame, clamped previous/next buttons, and preserved role-view links visible; the in-app Browser surface was unavailable, so screenshot verification used Playwright against the running local app.
+- Playwright e2e smoke: passing for Manager login, saved-run creation, Operator login, handoff selection, fixture-backed Father’s Day proposal generation, proposal approval, storefront config rendering, visual prompt review, publishing, Time Machine active status and strategic comparison, Secret Santa revamp, seasonal storefront config rendering, Secret Santa publishing, Guest active storefront rendering, explicit inactive-version Guest preview, Mission Control capture checklist links, and Guest close navigation.
+- Home page visual QA: passed for `?step=operator-proposal` at desktop and mobile widths with the split-screen replay lane, capture frame, clamped previous/next buttons, and preserved role-view links visible; a follow-up `?step=guest-preview` screenshot confirmed the Loom capture checklist fits below the replay controls. The in-app Browser surface was unavailable, so screenshot verification used Playwright against the running local app.
 
 ## Dependency Status
 
@@ -94,8 +97,8 @@ Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot w
 - Metrics Copilot traces persist for the approved Manager metric questions, with trace detail drilldown and saved-run comparison now available.
 - Storefront now renders the active published version with baseline fallback, fixture-backed hero visuals, and explicit baseline/published-version selection; richer visual polish remains future work.
 - Operator campaign proposals can be generated and reviewed, valid proposals can be revamped into Secret Santa, valid proposals can generate validated storefront configs, and valid configs can be published; rollback groundwork exists through published version history and Operator rollback actions.
-- Mission Control Demo Mode now has a replay checklist, URL-driven replay controls, and split-screen command-center polish on the home screen; Loom capture hardening remains future work.
+- Mission Control Demo Mode now has a replay checklist, URL-driven replay controls, split-screen command-center polish, and stable Loom capture checklist links on the home screen.
 
 ## Next Recommended Task
 
-Continue Phase 1 with Loom capture hardening.
+Human Loom capture testing.

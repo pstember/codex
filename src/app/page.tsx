@@ -109,6 +109,31 @@ export default async function Home({ searchParams }: HomeProps) {
               </li>
             ))}
           </ol>
+          <section
+            aria-label="Loom capture checklist"
+            className="rounded-md border border-neutral-200 bg-neutral-50 p-4"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
+                Loom capture checklist
+              </h2>
+              <span className="text-xs font-semibold text-neutral-500">stable links</span>
+            </div>
+            <div className="mt-3 grid gap-2">
+              {replay.captureChecklist.map((item) => (
+                <Link
+                  className="rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm hover:border-emerald-300"
+                  href={item.href}
+                  key={item.label}
+                >
+                  <span className="font-semibold">{item.label}</span>
+                  <span className="mt-1 block text-xs leading-5 text-neutral-600">
+                    {item.detail}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
         </div>
         <aside className="flex min-h-[calc(100vh-3rem)] min-w-0 flex-col gap-4">
           <div className="flex-1 rounded-lg border border-neutral-900 bg-neutral-950 p-4 text-white shadow-sm lg:p-5">

@@ -27,6 +27,7 @@ export type MissionControlReplay = {
   activeVersionName: string;
   selectedStep: MissionControlReplaySelectedStep;
   captureFrame: MissionControlReplayCaptureFrame;
+  captureChecklist: MissionControlReplayCaptureChecklistItem[];
   steps: MissionControlReplayStep[];
 };
 
@@ -57,6 +58,12 @@ export type MissionControlReplayCaptureFrame = {
     label: "Manager" | "Operator" | "Guest";
     href: string;
   }[];
+};
+
+export type MissionControlReplayCaptureChecklistItem = {
+  label: string;
+  href: string;
+  detail: string;
 };
 
 export function buildMissionControlReplay(input: {
@@ -180,6 +187,17 @@ export function buildMissionControlReplay(input: {
         { label: "Guest", href: "/store" },
       ],
     },
+    captureChecklist: buildCaptureChecklist({
+      selectedStep,
+      fatherDayTraceId: fatherDayTrace?.id ?? null,
+      operatorHref: fatherDayProposal ? `/operator?proposal=${fatherDayProposal.id}` : "/operator",
+      timeMachineHref: secretSantaVersion
+        ? `/operator?version=${secretSantaVersion.id}`
+        : fatherDayVersion
+          ? `/operator?version=${fatherDayVersion.id}`
+          : "/operator",
+      guestHref: activeVersion ? `/store?version=${activeVersion.id}` : "/store",
+    }),
     steps: stepsWithSelection,
   };
 }
@@ -224,6 +242,42 @@ function captureFrameBodyFor(stepId: MissionControlReplayStep["id"]): string {
     case "guest-preview":
       return "Open the active Guest storefront as the final Loom proof point.";
   }
+}
+
+function buildCaptureChecklist(input: {
+  selectedStep: MissionControlReplayStep;
+  fatherDayTraceId: string | null;
+  operatorHref: string;
+  timeMachineHref: string;
+  guestHref: string;
+}): MissionControlReplayCaptureChecklistItem[] {
+  return [
+    {
+      label: "Opening frame",
+      href: homeReplayStepHref(input.selectedStep.id),
+      detail: "Show Mission Control with the current replay step selected.",
+    },
+    {
+      label: "Manager trace",
+      href: input.fatherDayTraceId ? `/manager?run=${input.fatherDayTraceId}` : "/manager",
+      detail: "Open the saved metrics run and validated GraphQL trace.",
+    },
+    {
+      label: "Operator workspace",
+      href: input.operatorHref,
+      detail: "Generate and approve the campaign proposal from the handoff.",
+    },
+    {
+      label: "Time Machine",
+      href: input.timeMachineHref,
+      detail: "Publish versions and compare baseline, Father’s Day, and Secret Santa.",
+    },
+    {
+      label: "Guest close",
+      href: input.guestHref,
+      detail: "End on the active storefront preview.",
+    },
+  ];
 }
 
 function findSelectedStepIndex(steps: MissionControlReplayStep[], selectedStepId?: string | null) {

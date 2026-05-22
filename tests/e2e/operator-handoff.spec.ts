@@ -105,4 +105,28 @@ test("Operator publishes Father’s Day and revamps it into Secret Santa", async
       name: "Father’s Day gifts for grill masters, travelers, and everyday fixers.",
     }),
   ).toBeVisible();
+
+  await page.goto("/?step=guest-preview");
+
+  const captureChecklist = page.getByRole("region", { name: "Loom capture checklist" });
+  await expect(captureChecklist.getByRole("link", { name: /Opening frame/ })).toHaveAttribute(
+    "href",
+    "/?step=guest-preview",
+  );
+  await expect(captureChecklist.getByRole("link", { name: /Manager trace/ })).toHaveAttribute(
+    "href",
+    /\/manager\?run=/,
+  );
+  await expect(captureChecklist.getByRole("link", { name: /Operator workspace/ })).toHaveAttribute(
+    "href",
+    /\/operator\?proposal=/,
+  );
+  await expect(captureChecklist.getByRole("link", { name: /Time Machine/ })).toHaveAttribute(
+    "href",
+    /\/operator\?version=/,
+  );
+
+  await captureChecklist.getByRole("link", { name: /Guest close/ }).click();
+  await page.waitForURL(/\/store\?version=/);
+  await expect(page.getByText("Secret Santa", { exact: true })).toBeVisible();
 });

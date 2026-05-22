@@ -248,6 +248,45 @@ describe("Mission Control replay", () => {
       ],
     });
   });
+
+  it("builds stable Loom capture checklist links from replay state", () => {
+    const replay = buildMissionControlReplay({
+      traces: [fatherDayTrace],
+      proposals: [],
+      storefrontConfigs: [],
+      publishedVersions: [],
+      activeVersionId: null,
+      selectedStepId: "operator-proposal",
+    });
+
+    expect(replay.captureChecklist).toEqual([
+      {
+        label: "Opening frame",
+        href: "/?step=operator-proposal",
+        detail: "Show Mission Control with the current replay step selected.",
+      },
+      {
+        label: "Manager trace",
+        href: "/manager?run=trace-1",
+        detail: "Open the saved metrics run and validated GraphQL trace.",
+      },
+      {
+        label: "Operator workspace",
+        href: "/operator",
+        detail: "Generate and approve the campaign proposal from the handoff.",
+      },
+      {
+        label: "Time Machine",
+        href: "/operator",
+        detail: "Publish versions and compare baseline, Father’s Day, and Secret Santa.",
+      },
+      {
+        label: "Guest close",
+        href: "/store",
+        detail: "End on the active storefront preview.",
+      },
+    ]);
+  });
 });
 
 const fatherDayTrace = {
