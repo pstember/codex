@@ -45,6 +45,31 @@ export type MetricsCopilotAnswer = {
   insight: InsightSummary;
   chart: MetricsCopilotChart;
   recommendedProducts: Product[];
+  operatorHandoff: MetricsOperatorHandoff;
+};
+
+export type MetricsOperatorHandoff = {
+  campaignSeason: "fathers-day" | "general";
+  proposalPrompt: string;
+  insightTitle: string;
+  productIds: string[];
+  excludedProductIds: string[];
+};
+
+export type MetricsRunComparison = {
+  currentLabel: string;
+  savedLabel: string;
+  sharedProductCount: number;
+  changedProductCount: number;
+  currentOnlyProductIds: string[];
+  savedOnlyProductIds: string[];
+  productRows: Array<{
+    productId: string;
+    label: string;
+    status: "shared" | "current-only" | "saved-only";
+    marginPercent: number;
+    inventory: number;
+  }>;
 };
 
 export interface MetricsTraceStore {
@@ -77,6 +102,88 @@ export async function answerMetricsQuestion(input: {
     insight,
     chart: mapChart(generatedQuery.recommendedChart, recommendedProducts),
     recommendedProducts,
+    operatorHandoff: mapOperatorHandoff(
+      input.question,
+      insight,
+      recommendedProducts,
+      input.products,
+    ),
+  };
+}
+
+export function compareMetricsRuns(input: {
+  current: MetricsCopilotAnswer;
+  saved: MetricsCopilotAnswer;
+}): MetricsRunComparison {
+  const currentById = new Map(
+    input.current.recommendedProducts.map((product) => [product.id, product]),
+  );
+  const savedById = new Map(
+    input.saved.recommendedProducts.map((product) => [product.id, product]),
+  );
+  const currentOnlyProductIds = input.current.recommendedProducts
+    .map((product) => product.id)
+    .filter((productId) => !savedById.has(productId));
+  const savedOnlyProductIds = input.saved.recommendedProducts
+    .map((product) => product.id)
+    .filter((productId) => !currentById.has(productId));
+  const sharedProductCount =
+    input.current.recommendedProducts.length - currentOnlyProductIds.length;
+  const productRows = [
+    ...input.current.recommendedProducts.map((product) => ({
+      productId: product.id,
+      label: product.name,
+      status: savedById.has(product.id) ? ("shared" as const) : ("current-only" as const),
+      marginPercent: product.marginPercent,
+      inventory: product.inventory,
+    })),
+    ...input.saved.recommendedProducts
+      .filter((product) => !currentById.has(product.id))
+      .map((product) => ({
+        productId: product.id,
+        label: product.name,
+        status: "saved-only" as const,
+        marginPercent: product.marginPercent,
+        inventory: product.inventory,
+      })),
+  ];
+
+  return {
+    currentLabel: "Current draft",
+    savedLabel: "Selected saved run",
+    sharedProductCount,
+    changedProductCount: currentOnlyProductIds.length + savedOnlyProductIds.length,
+    currentOnlyProductIds,
+    savedOnlyProductIds,
+    productRows,
+  };
+}
+
+function mapOperatorHandoff(
+  question: string,
+  insight: InsightSummary,
+  recommendedProducts: Product[],
+  products: Product[],
+): MetricsOperatorHandoff {
+  const campaignSeason = question.toLowerCase().includes("father") ? "fathers-day" : "general";
+
+  return {
+    campaignSeason,
+    proposalPrompt:
+      campaignSeason === "fathers-day"
+        ? "Generate a Father’s Day campaign proposal from this metrics insight."
+        : "Generate an Operator campaign proposal from this metrics insight.",
+    insightTitle: insight.title,
+    productIds: recommendedProducts.map((product) => product.id),
+    excludedProductIds: products
+      .filter(
+        (product) => !recommendedProducts.some((recommended) => recommended.id === product.id),
+      )
+      .filter(
+        (product) =>
+          product.marginPercent < 40 || product.inventory < 100 || product.returnRate > 0.05,
+      )
+      .map((product) => product.id),
   };
 }
 

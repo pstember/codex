@@ -32,15 +32,17 @@ Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot w
 - Added Metrics Copilot chart/data-result mapping for product-table and funnel answers.
 - Updated the Manager page to render chart-ready rows from the answer shape and added a saved-run comparison panel.
 - Installed the Playwright Chromium browser for local UI smoke verification when relevant.
+- Added Metrics Copilot Operator handoff output with campaign season, proposal prompt, selected product IDs, and risk exclusions.
+- Reworked the Manager saved-run comparison into a visual status-and-inventory view backed by a tested domain comparison model.
 
 ## Test Status
 
 - `npm run typecheck`: passing.
 - `npm run lint`: passing.
-- `npm test`: passing, 8 files and 29 tests.
-- `npm run coverage`: passing, 88.88% lines, 89.32% statements, and 80.39% branches.
+- `npm test`: passing, 8 files and 30 tests.
+- `npm run coverage`: passing, 90.04% statements, 89.63% lines, and 83.33% branches.
 - `npm run build`: passing with `next build --webpack`.
-- Browser smoke test: passing for Manager Metrics Copilot login, saved-run creation, chart rendering, and saved-run comparison on the built app at `http://127.0.0.1:3002`.
+- Browser smoke test: passing for Manager login, saved-run creation, Operator handoff rendering, and visual saved-run comparison on the built app at `http://127.0.0.1:3002`.
 
 ## Dependency Status
 
@@ -63,4 +65,4 @@ Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot w
 
 ## Next Recommended Task
 
-Continue Phase 1 by making saved-run comparison more visual and preparing the Metrics Copilot insight output for the Operator campaign proposal handoff.
+Continue Phase 1 by connecting the Metrics Copilot Operator handoff to the first fixture-backed campaign proposal flow.

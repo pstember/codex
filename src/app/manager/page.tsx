@@ -4,6 +4,7 @@ import { runMetricsQuestionAction } from "@/app/manager/actions";
 import {
   answerMetricsQuestion,
   approvedMetricsQuestions,
+  compareMetricsRuns,
   isApprovedMetricsQuestion,
 } from "@/domain/metricsCopilot";
 import { products } from "@/fixtures/products";
@@ -47,10 +48,12 @@ export default async function ManagerPage({
     selectedTrace?.recommendedProductIds.map(
       (productId) => recommendedProductsById.get(productId)?.name ?? productId,
     ) ?? [];
-  const answerProductIds = new Set(answer.recommendedProducts.map((product) => product.id));
-  const selectedOverlapCount =
-    selectedTrace?.recommendedProductIds.filter((productId) => answerProductIds.has(productId))
-      .length ?? 0;
+  const comparison = selectedTraceAnswer
+    ? compareMetricsRuns({ current: answer, saved: selectedTraceAnswer })
+    : null;
+  const maxComparisonInventory = comparison
+    ? Math.max(...comparison.productRows.map((row) => row.inventory), 1)
+    : 1;
 
   return (
     <AppChrome eyebrow="Store Manager" title="Metrics command center" user={user}>
@@ -124,6 +127,39 @@ export default async function ManagerPage({
                 ))}
               </tbody>
             </table>
+          </div>
+
+          <div className="mt-6 rounded-md border border-emerald-200 bg-emerald-50 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-wide text-emerald-800">
+                  Operator handoff
+                </p>
+                <h3 className="mt-2 text-lg font-semibold text-neutral-950">
+                  {answer.operatorHandoff.proposalPrompt}
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-neutral-700">
+                  {answer.operatorHandoff.insightTitle}
+                </p>
+              </div>
+              <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-800">
+                {answer.operatorHandoff.campaignSeason}
+              </span>
+            </div>
+            <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="font-semibold text-neutral-900">Proposal products</dt>
+                <dd className="mt-1 text-neutral-700">
+                  {answer.operatorHandoff.productIds.length} validated picks
+                </dd>
+              </div>
+              <div>
+                <dt className="font-semibold text-neutral-900">Guardrails</dt>
+                <dd className="mt-1 text-neutral-700">
+                  Exclude {answer.operatorHandoff.excludedProductIds.length} risky products
+                </dd>
+              </div>
+            </dl>
           </div>
         </div>
 
@@ -242,29 +278,63 @@ export default async function ManagerPage({
             </div>
           ) : null}
 
-          {selectedTrace && selectedTraceAnswer ? (
+          {selectedTrace && comparison ? (
             <div className="rounded-lg border border-neutral-300 bg-white p-6">
               <p className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
                 Saved-run comparison
               </p>
-              <div className="mt-4 grid gap-3 text-sm">
-                <div className="rounded-md border border-neutral-200 p-3">
-                  <p className="font-semibold text-neutral-900">Current draft</p>
-                  <p className="mt-1 text-neutral-600">
-                    {answer.chart.type} · {answer.recommendedProducts.length} products
+              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-2xl font-semibold text-neutral-950">
+                    {comparison.sharedProductCount}
                   </p>
+                  <p className="mt-1 text-neutral-600">shared products</p>
                 </div>
-                <div className="rounded-md border border-neutral-200 p-3">
-                  <p className="font-semibold text-neutral-900">Selected saved run</p>
-                  <p className="mt-1 text-neutral-600">
-                    {selectedTrace.chartType} · {selectedTrace.recommendedProductIds.length}{" "}
-                    products
+                <div>
+                  <p className="text-2xl font-semibold text-neutral-950">
+                    {comparison.changedProductCount}
                   </p>
-                  <p className="mt-2 text-neutral-700">
-                    {selectedOverlapCount} products overlap with the current draft.
-                  </p>
-                  <p className="mt-2 text-neutral-600">{selectedTraceProductNames.join(", ")}</p>
+                  <p className="mt-1 text-neutral-600">changed picks</p>
                 </div>
+              </div>
+              <div className="mt-5 space-y-3 text-sm">
+                {comparison.productRows.map((row) => (
+                  <div key={row.productId}>
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-medium text-neutral-900">{row.label}</p>
+                      <span
+                        className={
+                          row.status === "shared"
+                            ? "rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-800"
+                            : "rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800"
+                        }
+                      >
+                        {row.status}
+                      </span>
+                    </div>
+                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-neutral-100">
+                      <div
+                        className={
+                          row.status === "shared" ? "h-full bg-emerald-500" : "h-full bg-amber-500"
+                        }
+                        style={{
+                          width: `${Math.max(8, (row.inventory / maxComparisonInventory) * 100)}%`,
+                        }}
+                      />
+                    </div>
+                    <p className="mt-1 text-xs text-neutral-500">
+                      {row.inventory} units · {row.marginPercent}% margin
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-5 border-t border-neutral-200 pt-4 text-sm text-neutral-600">
+                <p>
+                  {comparison.currentLabel}: {answer.recommendedProducts.length} products
+                </p>
+                <p className="mt-1">
+                  {comparison.savedLabel}: {selectedTraceProductNames.join(", ")}
+                </p>
               </div>
             </div>
           ) : null}

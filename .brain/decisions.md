@@ -30,6 +30,12 @@ Map Metrics Copilot answer data into chart-ready rows and columns inside `answer
 
 Rationale: chart/data-result mapping is durable product behavior, so it should be tested at the domain boundary and kept out of ad hoc page markup.
 
+## 2026-05-22 - Metrics handoff data stays with the answer
+
+Attach Operator handoff data and saved-run comparison rows to the Metrics Copilot domain answer instead of deriving campaign intent in page markup.
+
+Rationale: the Manager-to-Operator handoff is durable product behavior, and keeping it in the domain makes it testable before the Operator campaign proposal flow is fully built.
+
 ## 2026-05-22 - Metrics traces in SQLite
 
 Persist Metrics Copilot traces in SQLite through the same app database used for auth and products. The first Manager action only accepts approved fixture-backed questions and refreshes the Manager page after saving.
