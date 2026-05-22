@@ -12,7 +12,7 @@ import {
 import { generateStorefrontConfigFromProposal } from "@/domain/storefrontGeneration";
 import { publishStorefrontConfig, rollbackStorefrontVersion } from "@/domain/storefrontPublishing";
 import { products } from "@/fixtures/products";
-import { fixtureCodexHarness } from "@/harness/codexHarness";
+import { getCodexHarness } from "@/harness/codexHarness";
 import { getAppDatabase } from "@/persistence/appDatabase";
 
 export async function generateCampaignProposalAction(formData: FormData) {
@@ -37,7 +37,7 @@ export async function generateCampaignProposalAction(formData: FormData) {
   await proposeCampaignFromMetricsTrace({
     id: proposalId,
     sourceTrace,
-    harness: fixtureCodexHarness,
+    harness: getCodexHarness(),
     products,
     createdByUserId: user.id,
     createdAt: new Date(),
@@ -70,7 +70,7 @@ export async function generateStorefrontConfigAction(formData: FormData) {
   await generateStorefrontConfigFromProposal({
     id: storefrontConfigId,
     proposal,
-    harness: fixtureCodexHarness,
+    harness: getCodexHarness(),
     products,
     createdByUserId: user.id,
     createdAt: new Date(),
@@ -104,7 +104,7 @@ export async function revampSecretSantaProposalAction(formData: FormData) {
     id: revampedProposalId,
     sourceProposal,
     season: "secret-santa",
-    harness: fixtureCodexHarness,
+    harness: getCodexHarness(),
     products,
     createdByUserId: user.id,
     createdAt: new Date(),

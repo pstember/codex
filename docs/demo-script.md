@@ -19,6 +19,14 @@ Start capture at Mission Control:
 
 Use the home-screen Loom capture checklist for stable links into the saved Manager trace, Operator workspace, Storefront Time Machine, and Guest close. If a run has not created an artifact yet, the checklist falls back to the role workspace instead of a missing detail URL.
 
+For a real Codex App Server demo, start the app with:
+
+```sh
+CODEX_HARNESS_MODE=app-server npm run dev
+```
+
+The Manager and Operator generation actions will call `codex app-server` over stdio and validate the returned JSON. For deterministic rehearsal or if live Codex is unavailable, omit `CODEX_HARNESS_MODE` to use fixture mode.
+
 ## Act 1: Father’s Day
 
 1. Open `/?step=manager-insight` and frame Mission Control.

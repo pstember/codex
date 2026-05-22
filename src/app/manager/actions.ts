@@ -11,7 +11,7 @@ import {
   isApprovedMetricsQuestion,
 } from "@/domain/metricsCopilot";
 import { products } from "@/fixtures/products";
-import { fixtureCodexHarness } from "@/harness/codexHarness";
+import { getCodexHarness } from "@/harness/codexHarness";
 import { getAppDatabase } from "@/persistence/appDatabase";
 
 export async function runMetricsQuestionAction(formData: FormData) {
@@ -34,7 +34,7 @@ export async function runMetricsQuestionAction(formData: FormData) {
   await answerAndSaveMetricsQuestion({
     id: traceId,
     question,
-    harness: fixtureCodexHarness,
+    harness: getCodexHarness(),
     products,
     createdByUserId: user.id,
     createdAt: new Date(),

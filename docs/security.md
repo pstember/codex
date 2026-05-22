@@ -17,8 +17,9 @@ This is a local demo app, but it should model real security boundaries clearly.
 - Phase 1 added lightweight demo auth with HTTP-only session cookies and SQLite-backed sessions.
 - Manager and Operator routes/actions are protected by server-side permission checks.
 - Codex App Server is available through the local Codex CLI. Default `stdio://` use requires no localhost listener; optional `ws://127.0.0.1:<port>` development mode should bind to loopback only unless a separate security review approves remote access.
+- `CODEX_HARNESS_MODE=app-server` uses a spawned `codex app-server` stdio process with ephemeral read-only threads, `approvalPolicy: "never"`, and server-side schema validation of generated JSON before persistence/rendering. Fixture mode remains the default.
 - No live App Server integration secrets are required yet.
-- `npm run security:audit` was rerun on 2026-05-22.
+- `npm run security:audit` was rerun on 2026-05-23.
 - Audit currently reports 2 moderate advisories from Next's nested `postcss@8.4.31`.
 - `npm audit fix --force` would install `next@9.3.3`, which is a breaking downgrade, so this is documented and deferred rather than applied.
 

@@ -1,8 +1,16 @@
 import type { Campaign } from "@/domain/campaign";
-import type { GeneratedQuery, InsightSummary } from "@/domain/insight";
+import { campaignSchema } from "@/domain/campaign";
+import {
+  type GeneratedQuery,
+  generatedQuerySchema,
+  type InsightSummary,
+  insightSummarySchema,
+} from "@/domain/insight";
 import type { StorefrontConfig } from "@/domain/storefront";
+import { storefrontConfigSchema } from "@/domain/storefront";
 import { fatherDayCampaign, secretSantaCampaign } from "@/fixtures/campaigns";
 import { fatherDayStorefront, secretSantaStorefront } from "@/fixtures/storefront";
+import { runCodexAppServerJsonPrompt } from "@/harness/codexAppServerClient";
 
 export type CodexHarnessMode = "fixture" | "cli" | "app-server";
 
@@ -16,6 +24,12 @@ export interface CodexHarness {
   }): Promise<Campaign>;
   generateStorefrontConfig(campaign: Campaign): Promise<StorefrontConfig>;
 }
+
+export type CodexAppServerJsonRunner = <T>(input: {
+  prompt: string;
+  schemaName: string;
+  jsonSchema: Record<string, unknown>;
+}) => Promise<T>;
 
 const fatherDayQuery: GeneratedQuery = {
   question: "What should we promote for Father’s Day based on margin, inventory, and conversion?",
@@ -222,18 +236,214 @@ export const cliCodexHarness: CodexHarness = {
   },
 };
 
-export const appServerCodexHarness: CodexHarness = {
-  mode: "app-server",
-  async generateGraphQLQuery() {
-    throw new Error("Codex App Server is not configured yet.");
+export function createAppServerCodexHarness(
+  runJsonPrompt: CodexAppServerJsonRunner = runCodexAppServerJsonPrompt,
+): CodexHarness {
+  return {
+    mode: "app-server",
+    async generateGraphQLQuery(question) {
+      const result = await runJsonPrompt<GeneratedQuery>({
+        prompt: [
+          "Generate a commerce analytics GraphQL query for Atlas & Co.",
+          `Business question: ${question}`,
+          "Return JSON only. The query must use the seeded commerce schema and include products fields.",
+        ].join("\n"),
+        schemaName: "GeneratedQuery",
+        jsonSchema: generatedQueryJsonSchema,
+      });
+
+      return generatedQuerySchema.parse(result);
+    },
+    async summarizeInsight(question) {
+      const result = await runJsonPrompt<InsightSummary>({
+        prompt: [
+          "Summarize an Atlas & Co. commerce insight for the Manager workflow.",
+          `Business question: ${question}`,
+          "Use only product ids from the seeded catalog when recommending products.",
+          `Seeded product ids: ${seededProductIds.join(", ")}`,
+          "Return JSON only.",
+        ].join("\n"),
+        schemaName: "InsightSummary",
+        jsonSchema: insightSummaryJsonSchema,
+      });
+
+      return insightSummarySchema.parse(result);
+    },
+    async generateCampaignProposal(input) {
+      const result = await runJsonPrompt<Campaign>({
+        prompt: [
+          "Generate an Atlas & Co. campaign proposal for the Store Operator workflow.",
+          `Insight title: ${input.insightTitle}`,
+          `Required season: ${input.season}`,
+          "Use only product ids from the seeded catalog.",
+          `Seeded product ids: ${seededProductIds.join(", ")}`,
+          "Return JSON only.",
+        ].join("\n"),
+        schemaName: "Campaign",
+        jsonSchema: campaignJsonSchema,
+      });
+
+      return campaignSchema.parse(result);
+    },
+    async generateStorefrontConfig(campaign) {
+      const result = await runJsonPrompt<StorefrontConfig>({
+        prompt: [
+          "Generate a validated storefront config for Atlas & Co.",
+          `Campaign JSON: ${JSON.stringify(campaign)}`,
+          "Use only approved section types and product ids from the campaign.",
+          "visualAsset.path must point at an existing /fixtures/ hero image path.",
+          "Return JSON only.",
+        ].join("\n"),
+        schemaName: "StorefrontConfig",
+        jsonSchema: storefrontConfigJsonSchema,
+      });
+
+      return storefrontConfigSchema.parse(result);
+    },
+  };
+}
+
+export const appServerCodexHarness: CodexHarness = createAppServerCodexHarness();
+
+export function getCodexHarness(): CodexHarness {
+  return process.env.CODEX_HARNESS_MODE === "app-server"
+    ? appServerCodexHarness
+    : fixtureCodexHarness;
+}
+
+const seededProductIds = [
+  "portable-charcoal-grill",
+  "cast-iron-grill-press",
+  "insulated-cooler-tote",
+  "leather-travel-wallet",
+  "everyday-pocket-knife",
+  "pour-over-coffee-set",
+  "desk-organizer-tray",
+  "noise-canceling-earbuds",
+  "espresso-machine",
+];
+
+const generatedQueryJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["question", "operationName", "query", "rationale", "recommendedChart"],
+  properties: {
+    question: { type: "string" },
+    operationName: { type: "string" },
+    query: { type: "string" },
+    rationale: { type: "string" },
+    recommendedChart: {
+      type: "string",
+      enum: ["kpiCards", "line", "bar", "funnel", "productTable"],
+    },
   },
-  async summarizeInsight() {
-    throw new Error("Codex App Server is not configured yet.");
+};
+
+const insightSummaryJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["title", "summary", "recommendedProductIds", "risks"],
+  properties: {
+    title: { type: "string" },
+    summary: { type: "string" },
+    recommendedProductIds: {
+      type: "array",
+      items: { type: "string", enum: seededProductIds },
+    },
+    risks: { type: "array", items: { type: "string" } },
   },
-  async generateCampaignProposal() {
-    throw new Error("Codex App Server is not configured yet.");
+};
+
+const campaignJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: [
+    "id",
+    "name",
+    "season",
+    "summary",
+    "audience",
+    "productIds",
+    "expectedImpact",
+    "storefrontAngle",
+  ],
+  properties: {
+    id: { type: "string" },
+    name: { type: "string" },
+    season: { type: "string", enum: ["fathers-day", "secret-santa"] },
+    summary: { type: "string" },
+    audience: { type: "string" },
+    productIds: {
+      type: "array",
+      minItems: 1,
+      items: { type: "string", enum: seededProductIds },
+    },
+    expectedImpact: { type: "string" },
+    storefrontAngle: { type: "string" },
   },
-  async generateStorefrontConfig() {
-    throw new Error("Codex App Server is not configured yet.");
+};
+
+const storefrontConfigJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["id", "campaignId", "versionName", "style", "visualAsset", "sections"],
+  properties: {
+    id: { type: "string" },
+    campaignId: { type: "string" },
+    versionName: { type: "string" },
+    style: {
+      type: "object",
+      additionalProperties: false,
+      required: ["theme", "accentColor", "density"],
+      properties: {
+        theme: { type: "string", enum: ["heritage", "summer", "holiday"] },
+        accentColor: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
+        density: { type: "string", enum: ["compact", "comfortable", "editorial"] },
+      },
+    },
+    visualAsset: {
+      type: "object",
+      additionalProperties: false,
+      required: ["id", "campaignId", "prompt", "alt", "source", "path"],
+      properties: {
+        id: { type: "string" },
+        campaignId: { type: "string" },
+        prompt: { type: "string" },
+        alt: { type: "string" },
+        source: { type: "string", enum: ["fixture", "generated"] },
+        path: { type: "string", pattern: "^/fixtures/" },
+      },
+    },
+    sections: {
+      type: "array",
+      minItems: 1,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["id", "type", "title", "productIds"],
+        properties: {
+          id: { type: "string" },
+          type: {
+            type: "string",
+            enum: [
+              "hero",
+              "promoStrip",
+              "productRail",
+              "bundleCards",
+              "trustBlock",
+              "faq",
+              "countdown",
+              "featuredCollection",
+            ],
+          },
+          title: { type: "string" },
+          body: { type: "string" },
+          productIds: {
+            type: "array",
+            items: { type: "string" },
+          },
+        },
+      },
+    },
   },
 };

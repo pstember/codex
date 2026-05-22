@@ -8,7 +8,7 @@ import {
   isApprovedMetricsQuestion,
 } from "@/domain/metricsCopilot";
 import { products } from "@/fixtures/products";
-import { fixtureCodexHarness } from "@/harness/codexHarness";
+import { getCodexHarness } from "@/harness/codexHarness";
 import { getAppDatabase } from "@/persistence/appDatabase";
 
 export default async function ManagerPage({
@@ -23,9 +23,10 @@ export default async function ManagerPage({
     requestedQuestion && isApprovedMetricsQuestion(requestedQuestion)
       ? requestedQuestion
       : approvedMetricsQuestions[0];
+  const codexHarness = getCodexHarness();
   const answer = await answerMetricsQuestion({
     question: selectedQuestion,
-    harness: fixtureCodexHarness,
+    harness: codexHarness,
     products,
   });
   const database = getAppDatabase();
@@ -35,7 +36,7 @@ export default async function ManagerPage({
   const selectedTraceAnswer = selectedTrace
     ? await answerMetricsQuestion({
         question: selectedTrace.question,
-        harness: fixtureCodexHarness,
+        harness: codexHarness,
         products,
       })
     : null;

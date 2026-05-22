@@ -67,16 +67,18 @@ Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot w
 - Added a tested Loom capture checklist model and home-screen checklist with stable capture links for the opening frame, Manager trace, Operator workspace, Time Machine, and Guest close.
 - Hardened the Playwright smoke to assert Mission Control capture checklist links after the full demo path and verify the Guest close link navigates to the active Secret Santa storefront.
 - Updated `docs/demo-script.md` with exact Mission Control replay URLs and capture handoff steps for a human Loom run.
+- Added a real, configuration-gated Codex App Server harness path using `CODEX_HARNESS_MODE=app-server`, `codex app-server` stdio, ephemeral read-only threads, JSON-schema-constrained turns, and server-side validation before app persistence/rendering.
 
 ## Test Status
 
 - `npm run typecheck`: passing.
 - `npm run lint`: passing.
-- `npm test`: passing, 12 files and 60 tests.
-- `npm run coverage`: passing, 91.52% statements, 91.56% lines, and 83.87% branches.
+- `npm test`: passing, 12 files and 61 tests.
+- `npm run coverage`: passing, 91.74% statements, 91.79% lines, and 84.09% branches.
 - `npm run build`: passing with `next build --webpack`.
 - Playwright e2e smoke: passing for Manager login, saved-run creation, Operator login, handoff selection, fixture-backed Father’s Day proposal generation, proposal approval, storefront config rendering, visual prompt review, publishing, Time Machine active status and strategic comparison, Secret Santa revamp, seasonal storefront config rendering, Secret Santa publishing, Guest active storefront rendering, explicit inactive-version Guest preview, Mission Control capture checklist links, and Guest close navigation.
 - Home page visual QA: passed for `?step=operator-proposal` at desktop and mobile widths with the split-screen replay lane, capture frame, clamped previous/next buttons, and preserved role-view links visible; a follow-up `?step=guest-preview` screenshot confirmed the Loom capture checklist fits below the replay controls. The in-app Browser surface was unavailable, so screenshot verification used Playwright against the running local app.
+- Live Codex App Server smoke: passed after sandbox escalation; a direct `codex app-server` stdio turn returned `{"ok":true,"source":"codex-app-server"}`. The first sandboxed attempt failed because Codex could not write its normal state under `~/.codex`.
 
 ## Dependency Status
 
@@ -90,14 +92,14 @@ Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot w
 
 ## Known Gaps
 
-- Codex App Server is available locally through `codex app-server`, but the app adapter remains stubbed and configuration-gated for future integration.
+- Codex App Server is available locally through `codex app-server`, and the app includes a configuration-gated `stdio://` adapter for real Manager/Operator generation with validated JSON output.
 - UI is functional for auth/navigation and the first Manager Metrics Copilot slice, but not the final mission-control experience.
 - Login failure currently redirects back home without a visible inline error.
 - Phase 1 auth is demo-grade and intentionally not a production auth provider.
 - Metrics Copilot traces persist for the approved Manager metric questions, with trace detail drilldown and saved-run comparison now available.
 - Storefront now renders the active published version with baseline fallback, fixture-backed hero visuals, and explicit baseline/published-version selection; richer visual polish remains future work.
 - Operator campaign proposals can be generated and reviewed, valid proposals can be revamped into Secret Santa, valid proposals can generate validated storefront configs, and valid configs can be published; rollback groundwork exists through published version history and Operator rollback actions.
-- Mission Control Demo Mode now has a replay checklist, URL-driven replay controls, split-screen command-center polish, and stable Loom capture checklist links on the home screen.
+- Mission Control Demo Mode now has a replay checklist, URL-driven replay controls, split-screen command-center polish, stable Loom capture checklist links on the home screen, and a real gated Codex App Server generation path for live demos.
 
 ## Next Recommended Task
 

@@ -3,9 +3,11 @@ import { campaignSchema } from "@/domain/campaign";
 import { generatedQuerySchema, insightSummarySchema } from "@/domain/insight";
 import { storefrontConfigSchema } from "@/domain/storefront";
 import {
-  appServerCodexHarness,
+  type CodexAppServerJsonRunner,
   cliCodexHarness,
+  createAppServerCodexHarness,
   fixtureCodexHarness,
+  getCodexHarness,
 } from "@/harness/codexHarness";
 
 describe("fixture Codex harness", () => {
@@ -91,22 +93,77 @@ describe("fixture Codex harness", () => {
     expect(insightSummarySchema.parse(insight).recommendedProductIds.length).toBeGreaterThan(0);
   });
 
-  it("keeps the App Server harness explicitly blocked until configured", async () => {
-    await expect(appServerCodexHarness.generateGraphQLQuery("Father’s Day")).rejects.toThrow(
-      "Codex App Server is not configured yet.",
+  it("routes the App Server harness through a JSON prompt runner and validates outputs", async () => {
+    const requestedSchemas: string[] = [];
+    const fakeJsonRunner: CodexAppServerJsonRunner = async <T>(input: {
+      prompt: string;
+      schemaName: string;
+      jsonSchema: Record<string, unknown>;
+    }) => {
+      const { schemaName } = input;
+      requestedSchemas.push(schemaName);
+      let result: unknown;
+
+      if (schemaName === "GeneratedQuery") {
+        result = await fixtureCodexHarness.generateGraphQLQuery("Father’s Day");
+        return result as T;
+      }
+
+      if (schemaName === "InsightSummary") {
+        result = await fixtureCodexHarness.summarizeInsight("Father’s Day");
+        return result as T;
+      }
+
+      if (schemaName === "Campaign") {
+        result = await fixtureCodexHarness.generateCampaignProposal({
+          insightTitle: "Father’s Day",
+          season: "fathers-day",
+        });
+        return result as T;
+      }
+
+      result = await fixtureCodexHarness.generateStorefrontConfig(fatherCampaignFixture());
+      return result as T;
+    };
+    const appServerHarness = createAppServerCodexHarness(fakeJsonRunner);
+
+    const query = await appServerHarness.generateGraphQLQuery("Father’s Day");
+    const insight = await appServerHarness.summarizeInsight("Father’s Day");
+    const campaign = await appServerHarness.generateCampaignProposal({
+      insightTitle: "Father’s Day",
+      season: "fathers-day",
+    });
+    const storefront = await appServerHarness.generateStorefrontConfig(campaign);
+
+    expect(appServerHarness.mode).toBe("app-server");
+    expect(generatedQuerySchema.parse(query).operationName).toBe("FatherDayPromotionCandidates");
+    expect(insightSummarySchema.parse(insight).recommendedProductIds).toContain(
+      "portable-charcoal-grill",
     );
-    await expect(appServerCodexHarness.summarizeInsight("Father’s Day")).rejects.toThrow(
-      "Codex App Server is not configured yet.",
-    );
-    await expect(
-      appServerCodexHarness.generateCampaignProposal({
-        insightTitle: "Father’s Day",
-        season: "fathers-day",
-      }),
-    ).rejects.toThrow("Codex App Server is not configured yet.");
-    await expect(
-      appServerCodexHarness.generateStorefrontConfig(fatherCampaignFixture()),
-    ).rejects.toThrow("Codex App Server is not configured yet.");
+    expect(campaignSchema.parse(campaign).season).toBe("fathers-day");
+    expect(storefrontConfigSchema.parse(storefront).campaignId).toBe("fathers-day-2026");
+    expect(requestedSchemas).toEqual([
+      "GeneratedQuery",
+      "InsightSummary",
+      "Campaign",
+      "StorefrontConfig",
+    ]);
+  });
+
+  it("selects fixture mode by default and App Server mode only when explicitly configured", () => {
+    const originalMode = process.env.CODEX_HARNESS_MODE;
+
+    delete process.env.CODEX_HARNESS_MODE;
+    expect(getCodexHarness().mode).toBe("fixture");
+
+    process.env.CODEX_HARNESS_MODE = "app-server";
+    expect(getCodexHarness().mode).toBe("app-server");
+
+    if (originalMode === undefined) {
+      delete process.env.CODEX_HARNESS_MODE;
+    } else {
+      process.env.CODEX_HARNESS_MODE = originalMode;
+    }
   });
 });
 

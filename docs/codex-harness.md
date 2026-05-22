@@ -44,7 +44,15 @@ The app should use a server-side harness with these capabilities:
 
 - `fixtureCodexHarness`: deterministic outputs for tests, local development, and Loom replay.
 - `cliCodexHarness`: optional local Codex CLI integration where useful.
-- `appServerCodexHarness`: optional adapter for the Codex App Server protocol. Support `stdio://` for spawned child-process use and `ws://127.0.0.1:<port>` for manually started local development. The adapter should be gated by configuration and should never be required for tests.
+- `appServerCodexHarness`: optional adapter for the Codex App Server protocol. The app now supports a real `stdio://` path by spawning `codex app-server`, starting an ephemeral read-only thread, sending a JSON-schema-constrained turn, and validating the returned JSON before persistence or rendering. It is gated by `CODEX_HARNESS_MODE=app-server`; fixture mode remains the default for deterministic tests and Loom replay.
+
+To run a human demo with real Codex App Server usage:
+
+```sh
+CODEX_HARNESS_MODE=app-server npm run dev
+```
+
+Then use the normal Manager and Operator generation actions. If the Codex CLI is not authenticated or App Server is unavailable, switch back to fixture mode by omitting `CODEX_HARNESS_MODE`.
 - Storefront config generation enriches valid proposals with image-harness hero asset metadata before validation and persistence.
 
 ## Image Harness Interface

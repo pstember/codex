@@ -16,6 +16,10 @@ Build `codexHarness` behind an interface with deterministic fixtures first, opti
 
 The local Codex CLI includes `codex app-server`. By default it runs on `stdio://`; use `codex app-server --listen ws://127.0.0.1:4500` when a local WebSocket listener and `/readyz` or `/healthz` probes are useful. Keep the app-server harness optional and configuration-gated, with fixture mode remaining the deterministic default for tests and Loom replay.
 
+## 2026-05-23: App Server Harness Is Gated But Real
+
+Use `CODEX_HARNESS_MODE=app-server` to route Manager and Operator generation through a real `codex app-server` stdio session. Each request starts an ephemeral read-only thread, asks for JSON constrained by the target schema, and validates the result server-side. Fixture mode remains the default so tests and rehearsal stay deterministic.
+
 ## 2026-05-21: Constrained Generation
 
 Codex may generate GraphQL, campaign proposals, copy, image prompts, and storefront configs, but generated output must validate against schemas and approved component slots. Do not execute arbitrary generated code.

@@ -89,3 +89,6 @@ Rationale: Secret Santa needs a visible creative transformation, but visual outp
 Let the Guest storefront resolve `?version=baseline` or a published version id while `/store` continues to default to the active published version.
 
 Rationale: Time Machine should be demoable from the customer-facing surface without changing publication history, and inactive versions should remain previewable by explicit, auditable URL state.
+## 2026-05-23: Codex App Server Demo Path
+
+The app now has a real, configuration-gated Codex App Server path via `CODEX_HARNESS_MODE=app-server`. Keep fixtures as the default for deterministic tests and rehearsal, but use the App Server mode for hackathon proof that Manager/Operator generation can call live Codex and still validate output server-side.
