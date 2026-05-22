@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot with GraphQL validation, chart mapping, saved traces, Operator handoff, fixture-backed campaign proposal generation, fixture-backed storefront config generation, publishing controls, Guest rendering, rollback groundwork, Storefront Time Machine comparison, Secret Santa visual prompts/assets, richer seasonal comparison, explicit Guest version selection, and Mission Control Demo Mode replay groundwork.
+Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot with GraphQL validation, chart mapping, saved traces, Operator handoff, fixture-backed campaign proposal generation, fixture-backed storefront config generation, publishing controls, Guest rendering, rollback groundwork, Storefront Time Machine comparison, Secret Santa visual prompts/assets, richer seasonal comparison, explicit Guest version selection, and Mission Control Demo Mode replay groundwork and controls.
 
 ## Completed
 
@@ -62,16 +62,17 @@ Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot w
 - Extended the Playwright smoke so Guest selects the inactive Father’s Day version after Secret Santa is active.
 - Added a tested Mission Control replay model that derives demo milestones, current action, completion count, and active storefront from persisted workflow artifacts.
 - Surfaced Mission Control Demo Mode on the home screen with replay checkpoints linking into Manager, Operator, and Guest views.
+- Added URL-driven Mission Control replay controls for selected checkpoints, previous/next clamping, selected-step status/action display, and preserved role-view links.
 
 ## Test Status
 
 - `npm run typecheck`: passing.
 - `npm run lint`: passing.
-- `npm test`: passing, 12 files and 57 tests.
-- `npm run coverage`: passing, 91.79% statements, 91.91% lines, and 84.10% branches.
+- `npm test`: passing, 12 files and 58 tests.
+- `npm run coverage`: passing, 92.07% statements, 92.14% lines, and 84.26% branches.
 - `npm run build`: passing with `next build --webpack`.
 - Playwright e2e smoke: passing for Manager login, saved-run creation, Operator login, handoff selection, fixture-backed Father’s Day proposal generation, proposal approval, storefront config rendering, visual prompt review, publishing, Time Machine active status and strategic comparison, Secret Santa revamp, seasonal storefront config rendering, Secret Santa publishing, Guest active storefront rendering, and explicit inactive-version Guest preview.
-- Home page visual QA: passed with the Mission Control Demo Mode panel visible; Chromium emitted the existing hidden-input hydration warning during screenshot capture.
+- Home page visual QA: passed for `?step=operator-proposal` with selected replay controls, clamped previous/next buttons, and preserved role-view links visible; the in-app Browser surface was unavailable, so screenshot verification used Playwright against the running local app.
 
 ## Dependency Status
 
@@ -92,8 +93,8 @@ Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot w
 - Metrics Copilot traces persist for the approved Manager metric questions, with trace detail drilldown and saved-run comparison now available.
 - Storefront now renders the active published version with baseline fallback, fixture-backed hero visuals, and explicit baseline/published-version selection; richer visual polish remains future work.
 - Operator campaign proposals can be generated and reviewed, valid proposals can be revamped into Secret Santa, valid proposals can generate validated storefront configs, and valid configs can be published; rollback groundwork exists through published version history and Operator rollback actions.
-- Mission Control Demo Mode now has a replay checklist on the home screen; split-screen command-center polish and replay controls remain future work.
+- Mission Control Demo Mode now has a replay checklist and URL-driven replay controls on the home screen; split-screen command-center polish and Loom capture hardening remain future work.
 
 ## Next Recommended Task
 
-Continue Phase 1 with Mission Control split-screen polish, replay controls, or Loom capture hardening.
+Continue Phase 1 with Mission Control split-screen polish or Loom capture hardening.

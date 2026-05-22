@@ -9,7 +9,14 @@ import { fatherDayCampaign, secretSantaCampaign } from "@/fixtures/campaigns";
 import { products } from "@/fixtures/products";
 import { getAppDatabase } from "@/persistence/appDatabase";
 
-export default async function Home() {
+type HomeProps = {
+  searchParams?: Promise<{
+    step?: string;
+  }>;
+};
+
+export default async function Home({ searchParams }: HomeProps) {
+  const params = await searchParams;
   const currentUser = await getCurrentUser();
   const database = getAppDatabase();
   const activeVersion = database.findActiveStorefrontVersion();
@@ -19,6 +26,7 @@ export default async function Home() {
     storefrontConfigs: database.listRecentStorefrontConfigs(),
     publishedVersions: database.listPublishedStorefrontVersions(),
     activeVersionId: activeVersion?.id ?? null,
+    selectedStepId: params?.step ?? null,
   });
 
   return (
@@ -78,17 +86,57 @@ export default async function Home() {
             <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-neutral-500">
               Active storefront: {replay.activeVersionName}
             </p>
+            <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">
+                    Step {replay.selectedStep.position}/{replay.totalCount} ·{" "}
+                    {replay.selectedStep.status}
+                  </p>
+                  <p className="mt-1 font-semibold">{replay.selectedStep.title}</p>
+                </div>
+                <Link
+                  className="shrink-0 rounded-md bg-neutral-950 px-3 py-2 text-xs font-semibold text-white"
+                  href={replay.selectedStep.href}
+                >
+                  {replay.selectedStep.action}
+                </Link>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <Link
+                  className="rounded-md border border-emerald-200 bg-white px-3 py-2 text-center text-sm font-semibold text-emerald-900"
+                  href={replay.selectedStep.previousHref}
+                >
+                  Previous
+                </Link>
+                <Link
+                  className="rounded-md border border-emerald-200 bg-white px-3 py-2 text-center text-sm font-semibold text-emerald-900"
+                  href={replay.selectedStep.nextHref}
+                >
+                  Next
+                </Link>
+              </div>
+            </div>
             <ol className="mt-4 space-y-2">
               {replay.steps.map((step) => (
-                <li
-                  className="flex items-center justify-between gap-3 rounded-md border border-neutral-200 px-3 py-2 text-sm"
-                  key={step.id}
-                >
-                  <Link className="min-w-0 underline-offset-4 hover:underline" href={step.href}>
+                <li className={replayStepClassName(step)} key={step.id}>
+                  <Link
+                    aria-current={step.isSelected ? "step" : undefined}
+                    className="min-w-0 underline-offset-4 hover:underline"
+                    href={`/?step=${step.id}`}
+                  >
                     <span className="block truncate font-semibold">{step.title}</span>
                     <span className="text-xs text-neutral-500">{step.role}</span>
                   </Link>
-                  <span className={replayStatusClassName(step)}>{step.status}</span>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className={replayStatusClassName(step)}>{step.status}</span>
+                    <Link
+                      className="rounded-md border border-neutral-200 px-2 py-1 text-xs font-semibold text-neutral-700"
+                      href={step.href}
+                    >
+                      Open
+                    </Link>
+                  </div>
                 </li>
               ))}
             </ol>
@@ -122,6 +170,17 @@ export default async function Home() {
       </section>
     </main>
   );
+}
+
+function replayStepClassName(step: MissionControlReplayStep) {
+  const baseClassName =
+    "flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm";
+
+  if (step.isSelected) {
+    return `${baseClassName} border-emerald-400 bg-emerald-50`;
+  }
+
+  return `${baseClassName} border-neutral-200`;
 }
 
 function replayStatusClassName(step: MissionControlReplayStep) {

@@ -43,6 +43,11 @@ describe("Mission Control replay", () => {
     });
 
     expect(replay.nextAction).toBe("Generate Father’s Day proposal");
+    expect(replay.selectedStep).toMatchObject({
+      id: "operator-proposal",
+      title: "Generate Father’s Day proposal",
+      status: "current",
+    });
     expect(replay.steps.map((step) => step.status)).toEqual([
       "complete",
       "current",
@@ -168,6 +173,50 @@ describe("Mission Control replay", () => {
         },
       ],
     });
+  });
+
+  it("selects a replay step and clamps previous and next controls at the ends", () => {
+    const replay = buildMissionControlReplay({
+      traces: [fatherDayTrace],
+      proposals: [],
+      storefrontConfigs: [],
+      publishedVersions: [],
+      activeVersionId: null,
+      selectedStepId: "operator-proposal",
+    });
+
+    expect(replay.selectedStep).toMatchObject({
+      id: "operator-proposal",
+      position: 2,
+      title: "Generate Father’s Day proposal",
+      status: "current",
+      action: "Open Store Operator",
+      href: "/operator",
+      previousHref: "/?step=manager-insight",
+      nextHref: "/?step=fathers-day-publish",
+    });
+
+    expect(
+      buildMissionControlReplay({
+        traces: [],
+        proposals: [],
+        storefrontConfigs: [],
+        publishedVersions: [],
+        activeVersionId: null,
+        selectedStepId: "manager-insight",
+      }).selectedStep.previousHref,
+    ).toBe("/?step=manager-insight");
+
+    expect(
+      buildMissionControlReplay({
+        traces: [fatherDayTrace],
+        proposals: [],
+        storefrontConfigs: [],
+        publishedVersions: [],
+        activeVersionId: null,
+        selectedStepId: "guest-preview",
+      }).selectedStep.nextHref,
+    ).toBe("/?step=guest-preview");
   });
 });
 

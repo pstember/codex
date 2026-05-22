@@ -17,6 +17,7 @@ export type MissionControlReplayStep = {
   title: string;
   status: MissionControlReplayStatus;
   href: string;
+  isSelected: boolean;
 };
 
 export type MissionControlReplay = {
@@ -24,7 +25,19 @@ export type MissionControlReplay = {
   totalCount: number;
   nextAction: string;
   activeVersionName: string;
+  selectedStep: MissionControlReplaySelectedStep;
   steps: MissionControlReplayStep[];
+};
+
+export type MissionControlReplaySelectedStep = {
+  id: MissionControlReplayStep["id"];
+  position: number;
+  title: string;
+  status: MissionControlReplayStatus;
+  action: string;
+  href: string;
+  previousHref: string;
+  nextHref: string;
 };
 
 export function buildMissionControlReplay(input: {
@@ -33,6 +46,7 @@ export function buildMissionControlReplay(input: {
   storefrontConfigs: GeneratedStorefrontConfig[];
   publishedVersions: PublishedStorefrontVersion[];
   activeVersionId: string | null;
+  selectedStepId?: string | null;
 }): MissionControlReplay {
   const fatherDayTrace = input.traces.find((trace) =>
     trace.question.toLowerCase().includes("father"),
@@ -101,6 +115,14 @@ export function buildMissionControlReplay(input: {
       : steps.map((step, index) =>
           index === firstPendingIndex ? { ...step, status: "current" as const } : step,
         );
+  const selectedStepIndex = findSelectedStepIndex(replaySteps, input.selectedStepId);
+  const selectedStep = replaySteps[selectedStepIndex];
+  const previousStep = replaySteps[Math.max(selectedStepIndex - 1, 0)];
+  const nextStep = replaySteps[Math.min(selectedStepIndex + 1, replaySteps.length - 1)];
+  const stepsWithSelection = replaySteps.map((step) => ({
+    ...step,
+    isSelected: step.id === selectedStep.id,
+  }));
   const completedCount = replaySteps.filter((step) => step.status === "complete").length;
 
   return {
@@ -111,7 +133,17 @@ export function buildMissionControlReplay(input: {
         ? "Replay is ready for Loom capture."
         : replaySteps.find((step) => step.status === "current")?.title || "Start the demo replay.",
     activeVersionName: activeVersion?.config.versionName ?? "Baseline Atlas & Co.",
-    steps: replaySteps,
+    selectedStep: {
+      id: selectedStep.id,
+      position: selectedStepIndex + 1,
+      title: selectedStep.title,
+      status: selectedStep.status,
+      action: `Open ${selectedStep.role}`,
+      href: selectedStep.href,
+      previousHref: homeReplayStepHref(previousStep.id),
+      nextHref: homeReplayStepHref(nextStep.id),
+    },
+    steps: stepsWithSelection,
   };
 }
 
@@ -128,7 +160,24 @@ function replayStep(input: {
     title: input.title,
     status: input.isComplete ? "complete" : "pending",
     href: input.href,
+    isSelected: false,
   };
+}
+
+function homeReplayStepHref(stepId: MissionControlReplayStep["id"]): string {
+  return `/?step=${stepId}`;
+}
+
+function findSelectedStepIndex(steps: MissionControlReplayStep[], selectedStepId?: string | null) {
+  const requestedIndex = steps.findIndex((step) => step.id === selectedStepId);
+
+  if (requestedIndex !== -1) {
+    return requestedIndex;
+  }
+
+  const currentIndex = steps.findIndex((step) => step.status === "current");
+
+  return Math.max(currentIndex, 0);
 }
 
 function findPublishedVersionForCampaign(
