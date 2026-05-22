@@ -29,15 +29,18 @@ Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot w
 - Expanded the Manager Metrics Copilot form to the five approved metric golden questions.
 - Added saved-run detail rendering with generated GraphQL, validation status/errors, rationale, recommended products, and timestamp.
 - Switched local Next dev/build scripts to webpack because Turbopack currently fails to load `node:sqlite`.
+- Added Metrics Copilot chart/data-result mapping for product-table and funnel answers.
+- Updated the Manager page to render chart-ready rows from the answer shape and added a saved-run comparison panel.
+- Installed the Playwright Chromium browser for local UI smoke verification when relevant.
 
 ## Test Status
 
 - `npm run typecheck`: passing.
 - `npm run lint`: passing.
-- `npm test`: passing, 8 files and 28 tests.
-- `npm run coverage`: passing, 87.97% lines, 88.27% statements, and 82.22% branches.
+- `npm test`: passing, 8 files and 29 tests.
+- `npm run coverage`: passing, 88.88% lines, 89.32% statements, and 80.39% branches.
 - `npm run build`: passing with `next build --webpack`.
-- Browser smoke test: passing for the main page after dev-server restart and for Manager Metrics Copilot question selection, saved-run creation, and trace detail rendering at `http://localhost:3000/manager`.
+- Browser smoke test: passing for Manager Metrics Copilot login, saved-run creation, chart rendering, and saved-run comparison on the built app at `http://127.0.0.1:3002`.
 
 ## Dependency Status
 
@@ -55,9 +58,9 @@ Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot w
 - UI is functional for auth/navigation and the first Manager Metrics Copilot slice, but not the final mission-control experience.
 - Login failure currently redirects back home without a visible inline error.
 - Phase 1 auth is demo-grade and intentionally not a production auth provider.
-- Metrics Copilot traces persist for the approved Manager metric questions, with trace detail drilldown now available.
+- Metrics Copilot traces persist for the approved Manager metric questions, with trace detail drilldown and saved-run comparison now available.
 - Storefront remains baseline only; campaign publishing and Time Machine are future phases.
 
 ## Next Recommended Task
 
-Continue Phase 1 by adding chart/data-result mapping for Metrics Copilot answers and tightening the Manager UI polish around saved-run comparison.
+Continue Phase 1 by making saved-run comparison more visual and preparing the Metrics Copilot insight output for the Operator campaign proposal handoff.

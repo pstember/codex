@@ -43,6 +43,43 @@ describe("metrics copilot", () => {
     expect(result.insight.risks.join(" ")).toContain("espresso machine");
   });
 
+  it("maps answer data into chart-ready rows for the recommended visualization", async () => {
+    const productTableResult = await answerMetricsQuestion({
+      question:
+        "What should we promote for Father’s Day based on margin, inventory, and conversion?",
+      harness: fixtureCodexHarness,
+      products,
+    });
+
+    expect(productTableResult.chart).toMatchObject({
+      type: "productTable",
+      title: "Recommended products",
+      columns: ["Product", "Margin", "Stock", "Conversion", "Return risk"],
+    });
+    expect(productTableResult.chart.rows[0]).toEqual({
+      label: "Portable Charcoal Grill",
+      productId: "portable-charcoal-grill",
+      values: ["54%", "420", "8.7%", "1.8%"],
+    });
+
+    const funnelResult = await answerMetricsQuestion({
+      question: "Why did mobile conversion drop last week?",
+      harness: fixtureCodexHarness,
+      products,
+    });
+
+    expect(funnelResult.chart).toMatchObject({
+      type: "funnel",
+      title: "Conversion pressure",
+      columns: ["Stage", "Count", "Rate"],
+      rows: [
+        { label: "Product views", values: ["39,800", "100%"] },
+        { label: "Adds to cart", values: ["4,555", "11.4%"] },
+        { label: "Purchases", values: ["810", "2%"] },
+      ],
+    });
+  });
+
   it("saves a Metrics Copilot trace when answering an approved question", async () => {
     const savedTraces: unknown[] = [];
 

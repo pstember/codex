@@ -25,6 +25,13 @@ export const approvedMetricsQuestions = [
 
 export type MetricsCopilotChart = {
   type: GeneratedQuery["recommendedChart"];
+  title: string;
+  columns: string[];
+  rows: Array<{
+    label: string;
+    productId?: string;
+    values: string[];
+  }>;
 };
 
 export type MetricsCopilotTrace = {
@@ -57,6 +64,9 @@ export async function answerMetricsQuestion(input: {
   const validation = validateCommerceQuery(generatedQuery);
   const insight = await input.harness.summarizeInsight(input.question);
   const productsById = new Map(input.products.map((product) => [product.id, product]));
+  const recommendedProducts = insight.recommendedProductIds
+    .map((productId) => productsById.get(productId))
+    .filter((product): product is Product => Boolean(product));
 
   return {
     question: input.question,
@@ -65,13 +75,77 @@ export async function answerMetricsQuestion(input: {
       validation,
     },
     insight,
-    chart: {
-      type: generatedQuery.recommendedChart,
-    },
-    recommendedProducts: insight.recommendedProductIds
-      .map((productId) => productsById.get(productId))
-      .filter((product): product is Product => Boolean(product)),
+    chart: mapChart(generatedQuery.recommendedChart, recommendedProducts),
+    recommendedProducts,
   };
+}
+
+function mapChart(
+  type: GeneratedQuery["recommendedChart"],
+  recommendedProducts: Product[],
+): MetricsCopilotChart {
+  if (type === "funnel") {
+    const totalViews = sumBy(recommendedProducts, (product) => product.views);
+    const totalAddToCarts = Math.round(
+      sumBy(recommendedProducts, (product) => product.views * product.addToCartRate),
+    );
+    const totalPurchases = sumBy(recommendedProducts, (product) => product.purchaseCount);
+
+    return {
+      type,
+      title: "Conversion pressure",
+      columns: ["Stage", "Count", "Rate"],
+      rows: [
+        {
+          label: "Product views",
+          values: [formatInteger(totalViews), "100%"],
+        },
+        {
+          label: "Adds to cart",
+          values: [formatInteger(totalAddToCarts), formatRate(totalAddToCarts, totalViews)],
+        },
+        {
+          label: "Purchases",
+          values: [formatInteger(totalPurchases), formatRate(totalPurchases, totalViews)],
+        },
+      ],
+    };
+  }
+
+  return {
+    type,
+    title: type === "productTable" ? "Recommended products" : "Metric snapshot",
+    columns: ["Product", "Margin", "Stock", "Conversion", "Return risk"],
+    rows: recommendedProducts.map((product) => ({
+      label: product.name,
+      productId: product.id,
+      values: [
+        formatPercent(product.marginPercent / 100),
+        formatInteger(product.inventory),
+        formatPercent(product.conversionRate),
+        formatPercent(product.returnRate),
+      ],
+    })),
+  };
+}
+
+function sumBy(products: Product[], readValue: (product: Product) => number): number {
+  return products.reduce((total, product) => total + readValue(product), 0);
+}
+
+function formatInteger(value: number): string {
+  return new Intl.NumberFormat("en-GB", { maximumFractionDigits: 0 }).format(value);
+}
+
+function formatPercent(value: number): string {
+  return new Intl.NumberFormat("en-GB", {
+    maximumFractionDigits: 1,
+    style: "percent",
+  }).format(value);
+}
+
+function formatRate(numerator: number, denominator: number): string {
+  return denominator > 0 ? formatPercent(numerator / denominator) : "0%";
 }
 
 export async function answerAndSaveMetricsQuestion(input: {

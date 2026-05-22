@@ -17,6 +17,7 @@ If the work changes product direction, architecture, constraints, or repeatable 
 - Preserve user work. Do not revert unrelated changes.
 - Commit completed, tested slices as you go so changes remain easy to inspect and revert.
 - Avoid storing secrets, credentials, personal tokens, or transient logs in the repo.
+- If browser/runtime assets such as Playwright browsers are relevant to verification, install them as needed instead of stopping the task; mention the install in the session summary.
 
 ## Project Skills
 

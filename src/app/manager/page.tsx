@@ -43,6 +43,14 @@ export default async function ManagerPage({
   const selectedTraceRationale =
     selectedTrace?.rationale || selectedTraceAnswer?.trace.generatedQuery.rationale || "";
   const recommendedProductsById = new Map(products.map((product) => [product.id, product]));
+  const selectedTraceProductNames =
+    selectedTrace?.recommendedProductIds.map(
+      (productId) => recommendedProductsById.get(productId)?.name ?? productId,
+    ) ?? [];
+  const answerProductIds = new Set(answer.recommendedProducts.map((product) => product.id));
+  const selectedOverlapCount =
+    selectedTrace?.recommendedProductIds.filter((productId) => answerProductIds.has(productId))
+      .length ?? 0;
 
   return (
     <AppChrome eyebrow="Store Manager" title="Metrics command center" user={user}>
@@ -76,23 +84,42 @@ export default async function ManagerPage({
             </button>
           </form>
 
-          <div className="mt-6 overflow-hidden rounded-md border border-neutral-200">
+          <div className="mt-6">
+            <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
+                  {answer.chart.title}
+                </p>
+                <p className="mt-1 text-sm text-neutral-600">
+                  {answer.chart.type} · {answer.chart.rows.length} rows
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-hidden rounded-md border border-neutral-200">
             <table className="w-full text-left text-sm">
               <thead className="bg-neutral-100 text-neutral-600">
                 <tr>
-                  <th className="px-4 py-3 font-semibold">Product</th>
-                  <th className="px-4 py-3 font-semibold">Margin</th>
-                  <th className="px-4 py-3 font-semibold">Stock</th>
-                  <th className="px-4 py-3 font-semibold">Conversion</th>
+                  {answer.chart.columns.map((column) => (
+                    <th className="px-4 py-3 font-semibold" key={column}>
+                      {column}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-200">
-                {answer.recommendedProducts.map((product) => (
-                  <tr key={product.id}>
-                    <td className="px-4 py-3 font-medium">{product.name}</td>
-                    <td className="px-4 py-3">{product.marginPercent}%</td>
-                    <td className="px-4 py-3">{product.inventory}</td>
-                    <td className="px-4 py-3">{Math.round(product.conversionRate * 1000) / 10}%</td>
+                {answer.chart.rows.map((row) => (
+                  <tr key={row.productId ?? row.label}>
+                    <td className="px-4 py-3 font-medium">{row.label}</td>
+                    {row.values.map((value, index) => (
+                      <td
+                        className="px-4 py-3"
+                        key={`${row.label}-${answer.chart.columns[index + 1]}`}
+                      >
+                        {value}
+                      </td>
+                    ))}
                   </tr>
                 ))}
               </tbody>
@@ -212,6 +239,33 @@ export default async function ManagerPage({
                   </dd>
                 </div>
               </dl>
+            </div>
+          ) : null}
+
+          {selectedTrace && selectedTraceAnswer ? (
+            <div className="rounded-lg border border-neutral-300 bg-white p-6">
+              <p className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
+                Saved-run comparison
+              </p>
+              <div className="mt-4 grid gap-3 text-sm">
+                <div className="rounded-md border border-neutral-200 p-3">
+                  <p className="font-semibold text-neutral-900">Current draft</p>
+                  <p className="mt-1 text-neutral-600">
+                    {answer.chart.type} · {answer.recommendedProducts.length} products
+                  </p>
+                </div>
+                <div className="rounded-md border border-neutral-200 p-3">
+                  <p className="font-semibold text-neutral-900">Selected saved run</p>
+                  <p className="mt-1 text-neutral-600">
+                    {selectedTrace.chartType} · {selectedTrace.recommendedProductIds.length}{" "}
+                    products
+                  </p>
+                  <p className="mt-2 text-neutral-700">
+                    {selectedOverlapCount} products overlap with the current draft.
+                  </p>
+                  <p className="mt-2 text-neutral-600">{selectedTraceProductNames.join(", ")}</p>
+                </div>
+              </div>
             </div>
           ) : null}
         </aside>

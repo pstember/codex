@@ -24,6 +24,12 @@ Start Metrics Copilot as a server-side domain entry point, `answerMetricsQuestio
 
 Rationale: keeping the workflow behind a small domain service makes it testable before adding UI input, persistence, or live Codex integrations.
 
+## 2026-05-22 - Metrics chart mapping lives in the domain
+
+Map Metrics Copilot answer data into chart-ready rows and columns inside `answerMetricsQuestion`, then let the Manager UI render that public answer shape.
+
+Rationale: chart/data-result mapping is durable product behavior, so it should be tested at the domain boundary and kept out of ad hoc page markup.
+
 ## 2026-05-22 - Metrics traces in SQLite
 
 Persist Metrics Copilot traces in SQLite through the same app database used for auth and products. The first Manager action only accepts approved fixture-backed questions and refreshes the Manager page after saving.
