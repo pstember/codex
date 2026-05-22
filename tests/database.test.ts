@@ -215,4 +215,133 @@ describe("commerce SQLite database", () => {
       database.close();
     }
   });
+
+  it("persists published storefront versions and tracks the active version", () => {
+    const database = createCommerceDatabase();
+
+    try {
+      database.savePublishedStorefrontVersion({
+        id: "version-1",
+        sourceStorefrontConfigId: "storefront-draft-1",
+        config: {
+          id: "fathers-day-storefront",
+          campaignId: "fathers-day-2026",
+          versionName: "Father’s Day",
+          style: {
+            theme: "summer",
+            accentColor: "#b45309",
+            density: "editorial",
+          },
+          sections: [
+            {
+              id: "fd-hero",
+              type: "hero",
+              title: "Father’s Day gifts",
+              body: "Practical picks.",
+              productIds: ["portable-charcoal-grill"],
+            },
+          ],
+        },
+        status: "active",
+        rollbackOfVersionId: null,
+        publishedByUserId: "demo-operator",
+        publishedAt: new Date("2026-05-22T15:00:00.000Z"),
+      });
+      database.savePublishedStorefrontVersion({
+        id: "version-2",
+        sourceStorefrontConfigId: "storefront-draft-2",
+        config: {
+          id: "secret-santa-storefront",
+          campaignId: "secret-santa-2026",
+          versionName: "Secret Santa",
+          style: {
+            theme: "holiday",
+            accentColor: "#be123c",
+            density: "compact",
+          },
+          sections: [
+            {
+              id: "ss-hero",
+              type: "hero",
+              title: "Secret Santa gifts",
+              body: "Under £50.",
+              productIds: ["pour-over-coffee-set"],
+            },
+          ],
+        },
+        status: "active",
+        rollbackOfVersionId: null,
+        publishedByUserId: "demo-operator",
+        publishedAt: new Date("2026-05-22T16:00:00.000Z"),
+      });
+
+      expect(database.findActiveStorefrontVersion()).toMatchObject({
+        id: "version-2",
+        status: "active",
+        config: {
+          versionName: "Secret Santa",
+        },
+      });
+      expect(database.listPublishedStorefrontVersions()).toMatchObject([
+        {
+          id: "version-2",
+          status: "active",
+          rollbackOfVersionId: null,
+        },
+        {
+          id: "version-1",
+          status: "inactive",
+          rollbackOfVersionId: null,
+        },
+      ]);
+    } finally {
+      database.close();
+    }
+  });
+
+  it("persists inactive rollback targets without changing the active storefront version", () => {
+    const database = createCommerceDatabase();
+
+    try {
+      expect(database.findActiveStorefrontVersion()).toBeNull();
+      expect(database.findPublishedStorefrontVersionById("missing-version")).toBeNull();
+
+      database.savePublishedStorefrontVersion({
+        id: "version-archive",
+        sourceStorefrontConfigId: "storefront-draft-1",
+        config: {
+          id: "fathers-day-storefront",
+          campaignId: "fathers-day-2026",
+          versionName: "Father’s Day",
+          style: {
+            theme: "summer",
+            accentColor: "#b45309",
+            density: "editorial",
+          },
+          sections: [
+            {
+              id: "fd-hero",
+              type: "hero",
+              title: "Father’s Day gifts",
+              body: "Practical picks.",
+              productIds: ["portable-charcoal-grill"],
+            },
+          ],
+        },
+        status: "inactive",
+        rollbackOfVersionId: "version-previous",
+        publishedByUserId: "demo-operator",
+        publishedAt: new Date("2026-05-22T17:00:00.000Z"),
+      });
+
+      expect(database.findActiveStorefrontVersion()).toBeNull();
+      expect(database.findPublishedStorefrontVersionById("version-archive")).toMatchObject({
+        id: "version-archive",
+        status: "inactive",
+        rollbackOfVersionId: "version-previous",
+      });
+    } finally {
+      database.close();
+    }
+  });
 });

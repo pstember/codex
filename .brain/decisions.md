@@ -54,6 +54,12 @@ Generate fixture-backed storefront configs only from valid Operator campaign pro
 
 Rationale: the storefront step must stay traceable and constrained before publishing exists, while still proving Codex can turn an approved campaign into renderable storefront structure.
 
+## 2026-05-22 - Published storefront versions
+
+Keep generated storefront configs as reviewable drafts and create separate published version records for Guest rendering. Publishing a valid draft deactivates the previous active version; rollback creates a new active version from a prior published version.
+
+Rationale: version history should remain auditable and Time Machine-ready, while the Guest storefront has one clear active source.
+
 ## 2026-05-22 - Commit completed slices as checkpoints
 
 Commit completed, tested slices as work progresses instead of letting large unstaged diffs accumulate.

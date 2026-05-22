@@ -35,3 +35,7 @@ Run `next dev --webpack` and `next build --webpack` because Next 16 Turbopack cu
 ## 2026-05-22: Storefront Config Drafts Are Validated Before Review
 
 Operator-approved campaign proposals generate fixture-backed storefront configs through the Codex harness, then validate the config schema, campaign linkage, approved section types, and product references before saving to SQLite.
+
+## 2026-05-22: Published Storefront Versions Are Separate From Generated Drafts
+
+Publishing a valid generated storefront config creates a published version row, deactivates the previous active version, and makes the new version the Guest storefront source. Rollback creates a new active version from a prior published version instead of mutating history.

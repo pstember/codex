@@ -4,6 +4,7 @@ import type { MetricsTrace } from "@/domain/metricsTrace";
 import type { CampaignProposal } from "@/domain/operatorCampaign";
 import type { Product } from "@/domain/product";
 import type { GeneratedStorefrontConfig } from "@/domain/storefrontGeneration";
+import type { PublishedStorefrontVersion } from "@/domain/storefrontPublishing";
 import type { AuthenticatedUser, User } from "@/domain/users";
 
 const { DatabaseSync } = createRequire(import.meta.url)(
@@ -25,6 +26,10 @@ export interface CommerceDatabase extends AuthStore {
   saveStorefrontConfig(storefrontConfig: GeneratedStorefrontConfig): void;
   listRecentStorefrontConfigs(limit?: number): GeneratedStorefrontConfig[];
   findStorefrontConfigById(id: string): GeneratedStorefrontConfig | null;
+  savePublishedStorefrontVersion(version: PublishedStorefrontVersion): void;
+  listPublishedStorefrontVersions(limit?: number): PublishedStorefrontVersion[];
+  findPublishedStorefrontVersionById(id: string): PublishedStorefrontVersion | null;
+  findActiveStorefrontVersion(): PublishedStorefrontVersion | null;
 }
 
 export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
@@ -88,6 +93,16 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
       validation_errors_json TEXT NOT NULL,
       created_by_user_id TEXT NOT NULL,
       created_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS published_storefront_versions (
+      id TEXT PRIMARY KEY,
+      source_storefront_config_id TEXT NOT NULL,
+      config_json TEXT NOT NULL,
+      status TEXT NOT NULL,
+      rollback_of_version_id TEXT,
+      published_by_user_id TEXT NOT NULL,
+      published_at TEXT NOT NULL
     );
   `);
 
@@ -328,6 +343,74 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
     WHERE id = ?;
   `);
 
+  const deactivateActiveStorefrontVersions = database.prepare(`
+    UPDATE published_storefront_versions
+    SET status = 'inactive'
+    WHERE status = 'active';
+  `);
+
+  const insertPublishedStorefrontVersion = database.prepare(`
+    INSERT INTO published_storefront_versions (
+      id,
+      source_storefront_config_id,
+      config_json,
+      status,
+      rollback_of_version_id,
+      published_by_user_id,
+      published_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      source_storefront_config_id = excluded.source_storefront_config_id,
+      config_json = excluded.config_json,
+      status = excluded.status,
+      rollback_of_version_id = excluded.rollback_of_version_id,
+      published_by_user_id = excluded.published_by_user_id,
+      published_at = excluded.published_at;
+  `);
+
+  const listPublishedStorefrontVersions = database.prepare(`
+    SELECT
+      id,
+      source_storefront_config_id AS sourceStorefrontConfigId,
+      config_json AS configJson,
+      status,
+      rollback_of_version_id AS rollbackOfVersionId,
+      published_by_user_id AS publishedByUserId,
+      published_at AS publishedAt
+    FROM published_storefront_versions
+    ORDER BY published_at DESC
+    LIMIT ?;
+  `);
+
+  const findPublishedStorefrontVersion = database.prepare(`
+    SELECT
+      id,
+      source_storefront_config_id AS sourceStorefrontConfigId,
+      config_json AS configJson,
+      status,
+      rollback_of_version_id AS rollbackOfVersionId,
+      published_by_user_id AS publishedByUserId,
+      published_at AS publishedAt
+    FROM published_storefront_versions
+    WHERE id = ?;
+  `);
+
+  const findActivePublishedStorefrontVersion = database.prepare(`
+    SELECT
+      id,
+      source_storefront_config_id AS sourceStorefrontConfigId,
+      config_json AS configJson,
+      status,
+      rollback_of_version_id AS rollbackOfVersionId,
+      published_by_user_id AS publishedByUserId,
+      published_at AS publishedAt
+    FROM published_storefront_versions
+    WHERE status = 'active'
+    ORDER BY published_at DESC
+    LIMIT 1;
+  `);
+
   function parseMetricsTraceRow(row: {
     id: string;
     question: string;
@@ -393,6 +476,26 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
       validationErrors: JSON.parse(row.validationErrorsJson) as string[],
       createdByUserId: row.createdByUserId,
       createdAt: new Date(row.createdAt),
+    };
+  }
+
+  function parsePublishedStorefrontVersionRow(row: {
+    id: string;
+    sourceStorefrontConfigId: string;
+    configJson: string;
+    status: PublishedStorefrontVersion["status"];
+    rollbackOfVersionId: string | null;
+    publishedByUserId: string;
+    publishedAt: string;
+  }): PublishedStorefrontVersion {
+    return {
+      id: row.id,
+      sourceStorefrontConfigId: row.sourceStorefrontConfigId,
+      config: JSON.parse(row.configJson) as PublishedStorefrontVersion["config"],
+      status: row.status,
+      rollbackOfVersionId: row.rollbackOfVersionId,
+      publishedByUserId: row.publishedByUserId,
+      publishedAt: new Date(row.publishedAt),
     };
   }
 
@@ -571,6 +674,51 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
         | undefined;
 
       return row ? parseStorefrontConfigRow(row) : null;
+    },
+    savePublishedStorefrontVersion(version) {
+      database.exec("BEGIN");
+
+      try {
+        if (version.status === "active") {
+          deactivateActiveStorefrontVersions.run();
+        }
+
+        insertPublishedStorefrontVersion.run(
+          version.id,
+          version.sourceStorefrontConfigId,
+          JSON.stringify(version.config),
+          version.status,
+          version.rollbackOfVersionId,
+          version.publishedByUserId,
+          version.publishedAt.toISOString(),
+        );
+
+        database.exec("COMMIT");
+      } catch (error) {
+        database.exec("ROLLBACK");
+        throw error;
+      }
+    },
+    listPublishedStorefrontVersions(limit = 10) {
+      const rows = listPublishedStorefrontVersions.all(limit) as Array<
+        Parameters<typeof parsePublishedStorefrontVersionRow>[0]
+      >;
+
+      return rows.map(parsePublishedStorefrontVersionRow);
+    },
+    findPublishedStorefrontVersionById(id) {
+      const row = findPublishedStorefrontVersion.get(id) as
+        | Parameters<typeof parsePublishedStorefrontVersionRow>[0]
+        | undefined;
+
+      return row ? parsePublishedStorefrontVersionRow(row) : null;
+    },
+    findActiveStorefrontVersion() {
+      const row = findActivePublishedStorefrontVersion.get() as
+        | Parameters<typeof parsePublishedStorefrontVersionRow>[0]
+        | undefined;
+
+      return row ? parsePublishedStorefrontVersionRow(row) : null;
     },
   };
 }

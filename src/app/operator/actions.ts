@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/app/auth/session";
 import { requirePermission } from "@/domain/auth";
 import { proposeCampaignFromMetricsTrace } from "@/domain/operatorCampaign";
 import { generateStorefrontConfigFromProposal } from "@/domain/storefrontGeneration";
+import { publishStorefrontConfig, rollbackStorefrontVersion } from "@/domain/storefrontPublishing";
 import { products } from "@/fixtures/products";
 import { fixtureCodexHarness } from "@/harness/codexHarness";
 import { getAppDatabase } from "@/persistence/appDatabase";
@@ -75,4 +76,64 @@ export async function generateStorefrontConfigAction(formData: FormData) {
 
   revalidatePath("/operator");
   redirect(`/operator?proposal=${proposalId}&storefront=${storefrontConfigId}`);
+}
+
+export async function publishStorefrontConfigAction(formData: FormData) {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    redirect("/");
+  }
+
+  requirePermission(user, "publish_storefront");
+
+  const storefrontConfigId = String(formData.get("storefrontConfigId") ?? "");
+  const database = getAppDatabase();
+  const storefrontConfig = database.findStorefrontConfigById(storefrontConfigId);
+
+  if (!storefrontConfig) {
+    throw new Error("Storefront config was not found for publishing.");
+  }
+
+  const version = publishStorefrontConfig({
+    id: randomUUID(),
+    storefrontConfig,
+    publishedByUserId: user.id,
+    publishedAt: new Date(),
+    publicationStore: database,
+  });
+
+  revalidatePath("/operator");
+  revalidatePath("/store");
+  redirect(`/operator?storefront=${storefrontConfigId}&version=${version.id}`);
+}
+
+export async function rollbackStorefrontVersionAction(formData: FormData) {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    redirect("/");
+  }
+
+  requirePermission(user, "publish_storefront");
+
+  const versionId = String(formData.get("versionId") ?? "");
+  const database = getAppDatabase();
+  const targetVersion = database.findPublishedStorefrontVersionById(versionId);
+
+  if (!targetVersion) {
+    throw new Error("Storefront version was not found for rollback.");
+  }
+
+  const rollbackVersion = rollbackStorefrontVersion({
+    id: randomUUID(),
+    targetVersion,
+    rolledBackByUserId: user.id,
+    rolledBackAt: new Date(),
+    publicationStore: database,
+  });
+
+  revalidatePath("/operator");
+  revalidatePath("/store");
+  redirect(`/operator?version=${rollbackVersion.id}`);
 }

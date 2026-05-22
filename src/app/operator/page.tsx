@@ -3,6 +3,8 @@ import { AppChrome } from "@/app/components/AppChrome";
 import {
   generateCampaignProposalAction,
   generateStorefrontConfigAction,
+  publishStorefrontConfigAction,
+  rollbackStorefrontVersionAction,
 } from "@/app/operator/actions";
 import { products } from "@/fixtures/products";
 import { getAppDatabase } from "@/persistence/appDatabase";
@@ -10,7 +12,12 @@ import { getAppDatabase } from "@/persistence/appDatabase";
 export default async function OperatorPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ trace?: string; proposal?: string; storefront?: string }>;
+  searchParams?: Promise<{
+    trace?: string;
+    proposal?: string;
+    storefront?: string;
+    version?: string;
+  }>;
 }) {
   const user = await requireCurrentUser("publish_storefront");
   const params = await searchParams;
@@ -18,6 +25,8 @@ export default async function OperatorPage({
   const traces = database.listRecentMetricsTraces();
   const proposals = database.listRecentCampaignProposals();
   const storefrontConfigs = database.listRecentStorefrontConfigs();
+  const publishedVersions = database.listPublishedStorefrontVersions();
+  const activeVersion = database.findActiveStorefrontVersion();
   const selectedTrace =
     (params?.trace ? database.findMetricsTraceById(params.trace) : null) ?? traces[0] ?? null;
   const selectedProposal =
@@ -219,6 +228,21 @@ export default async function OperatorPage({
                     ))}
                   </ul>
                 ) : null}
+                {selectedStorefrontConfig.validationStatus === "valid" ? (
+                  <form action={publishStorefrontConfigAction} className="mt-5">
+                    <input
+                      name="storefrontConfigId"
+                      type="hidden"
+                      value={selectedStorefrontConfig.id}
+                    />
+                    <button
+                      className="rounded-md bg-neutral-950 px-4 py-2 text-sm font-semibold text-white"
+                      type="submit"
+                    >
+                      Publish storefront
+                    </button>
+                  </form>
+                ) : null}
                 <div className="mt-5 grid gap-3">
                   {selectedStorefrontConfig.config.sections.map((section) => (
                     <article className="rounded-md border border-neutral-200 p-4" key={section.id}>
@@ -247,6 +271,69 @@ export default async function OperatorPage({
                 Approve a valid campaign proposal to generate a fixture-backed storefront config.
               </p>
             )}
+          </div>
+
+          <div className="rounded-lg border border-neutral-300 bg-white p-6">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
+                  Storefront Time Machine
+                </p>
+                {activeVersion ? (
+                  <p className="mt-2 text-sm leading-6 text-neutral-700">
+                    Active Guest version: {activeVersion.config.versionName}
+                  </p>
+                ) : (
+                  <p className="mt-2 text-sm leading-6 text-neutral-600">
+                    Publish a storefront config to create the first Guest version.
+                  </p>
+                )}
+              </div>
+              <a
+                className="rounded-md border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-900"
+                href="/store"
+              >
+                Open Guest storefront
+              </a>
+            </div>
+            {publishedVersions.length > 0 ? (
+              <ol className="mt-5 space-y-3 text-sm">
+                {publishedVersions.map((version) => (
+                  <li
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-neutral-200 p-4"
+                    key={version.id}
+                  >
+                    <div>
+                      <a
+                        className="font-semibold underline-offset-4 hover:underline"
+                        href={`/operator?version=${version.id}`}
+                      >
+                        {version.config.versionName}
+                      </a>
+                      <p className="mt-1 text-neutral-600">
+                        {version.status} · {version.publishedAt.toLocaleString("en-GB")}
+                        {version.rollbackOfVersionId ? " · rollback" : ""}
+                      </p>
+                    </div>
+                    {version.status === "inactive" ? (
+                      <form action={rollbackStorefrontVersionAction}>
+                        <input name="versionId" type="hidden" value={version.id} />
+                        <button
+                          className="rounded-md border border-neutral-300 px-3 py-2 text-xs font-semibold text-neutral-900"
+                          type="submit"
+                        >
+                          Roll back
+                        </button>
+                      </form>
+                    ) : (
+                      <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-800">
+                        Live
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            ) : null}
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
