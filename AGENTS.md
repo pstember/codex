@@ -31,3 +31,22 @@ Use `.brain/decisions.md` for product, architecture, and implementation decision
 Use `.brain/learnings.md` for durable discoveries, constraints, and lessons that should affect future work.
 
 Use `.brain/open-questions.md` for unresolved questions that could change the product or implementation.
+
+## Commerce Copilot Studio
+
+Project plan and session handoff live in `docs/`. Before changing app code, read `docs/master-plan.md`, `docs/progress.md`, `docs/decisions.md`, `docs/testing.md`, `docs/security.md`, `docs/codex-harness.md`, and `docs/demo-script.md`.
+
+Hackathon evaluation rubric:
+
+- Working application: features may be minimal, but they should feel fully baked and avoid broken or confusing UX.
+- Creativity: the app should have a clear wow factor and be interesting enough to gain attention on social media.
+- Code quality: code should be easy to understand, maintainable, and suitable for open sourcing.
+- Communication: the app demo or video should explain a technical topic in an engaging, accessible way.
+
+Non-negotiables:
+
+- Work in small, tested phases and update `docs/progress.md` before ending a session.
+- Use TDD for durable behavior and keep an 80% coverage target for core app logic.
+- Use latest stable dependency versions; run `npm outdated` when checking freshness.
+- Use Tailwind CSS v4, Biome, strict TypeScript, Vitest, Playwright, and SQLite persistence.
+- Keep generated Codex/image output constrained, fixture-backed, and server-validated.
