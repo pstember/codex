@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot with GraphQL validation, chart mapping, saved traces, Operator handoff, fixture-backed campaign proposal generation, fixture-backed storefront config generation, publishing controls, Guest rendering, rollback groundwork, and Storefront Time Machine comparison.
+Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot with GraphQL validation, chart mapping, saved traces, Operator handoff, fixture-backed campaign proposal generation, fixture-backed storefront config generation, publishing controls, Guest rendering, rollback groundwork, Storefront Time Machine comparison, and Secret Santa revamp groundwork.
 
 ## Completed
 
@@ -50,15 +50,19 @@ Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot w
 - Extended the Playwright e2e smoke through publishing and Guest storefront rendering.
 - Expanded Storefront Time Machine with baseline/published version selectors and a tested comparison model for campaign, style, section, and product deltas.
 - Extended the Playwright e2e smoke to assert the visible Time Machine comparison panel after publishing.
+- Added a fixture-backed Operator revamp workflow that rewrites a valid Father’s Day proposal into a Secret Santa proposal.
+- Added server-side validation that Secret Santa campaign proposals and storefront configs only include products priced at £50 or below.
+- Added an Operator `Revamp for Secret Santa` action and extended the Playwright smoke through Father’s Day publish, Secret Santa revamp, seasonal storefront config generation, publish, and Guest rendering.
+- Allowed `127.0.0.1` as a Next dev origin for local Playwright runs.
 
 ## Test Status
 
 - `npm run typecheck`: passing.
 - `npm run lint`: passing.
-- `npm test`: passing, 11 files and 42 tests.
-- `npm run coverage`: passing, 90.6% statements, 90.87% lines, and 82.02% branches.
+- `npm test`: passing, 11 files and 45 tests.
+- `npm run coverage`: passing, 90.93% statements, 91.14% lines, and 81.44% branches.
 - `npm run build`: passing with `next build --webpack`.
-- Playwright e2e smoke: passing for Manager login, saved-run creation, Operator login, handoff selection, fixture-backed proposal generation, proposal approval, storefront config rendering, publishing, Time Machine active status and comparison, and Guest storefront rendering.
+- Playwright e2e smoke: passing for Manager login, saved-run creation, Operator login, handoff selection, fixture-backed Father’s Day proposal generation, proposal approval, storefront config rendering, publishing, Time Machine active status and comparison, Secret Santa revamp, seasonal storefront config rendering, Secret Santa publishing, and Guest storefront rendering.
 
 ## Dependency Status
 
@@ -78,8 +82,8 @@ Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot w
 - Phase 1 auth is demo-grade and intentionally not a production auth provider.
 - Metrics Copilot traces persist for the approved Manager metric questions, with trace detail drilldown and saved-run comparison now available.
 - Storefront now renders the active published version with baseline fallback; explicit Guest version selection and richer visual polish remain future work.
-- Operator campaign proposals can be generated and reviewed, valid proposals can generate validated storefront configs, and valid configs can be published; rollback groundwork exists through published version history and Operator rollback actions.
+- Operator campaign proposals can be generated and reviewed, valid proposals can be revamped into Secret Santa, valid proposals can generate validated storefront configs, and valid configs can be published; rollback groundwork exists through published version history and Operator rollback actions.
 
 ## Next Recommended Task
 
-Continue Phase 1 by moving toward Secret Santa campaign revamp groundwork: copy rewrite, product reselection under £50, and validated seasonal storefront config generation.
+Continue Phase 1 by adding Secret Santa visual prompts/assets and richer Time Machine comparison between Father’s Day and Secret Santa versions.

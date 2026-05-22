@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { type Campaign, campaignSchema } from "@/domain/campaign";
 import type { MetricsTrace } from "@/domain/metricsTrace";
-import type { Product } from "@/domain/product";
+import { findProductsOverPriceLimit, type Product } from "@/domain/product";
 import type { CodexHarness } from "@/harness/codexHarness";
 
 export const campaignProposalSchema = z.object({
@@ -50,6 +50,40 @@ export async function proposeCampaignFromMetricsTrace(input: {
   return proposal;
 }
 
+export async function revampCampaignProposalForSeason(input: {
+  id: string;
+  sourceProposal: CampaignProposal;
+  season: Campaign["season"];
+  harness: CodexHarness;
+  products: Product[];
+  createdByUserId: string;
+  createdAt: Date;
+  proposalStore: CampaignProposalStore;
+}): Promise<CampaignProposal> {
+  if (input.sourceProposal.validationStatus !== "valid") {
+    throw new Error("Only valid campaign proposals can be revamped.");
+  }
+
+  const campaign = await input.harness.generateCampaignProposal({
+    insightTitle: input.sourceProposal.campaign.name,
+    season: input.season,
+  });
+  const validationErrors = validateCampaignProposal(campaign, input.products);
+  const proposal: CampaignProposal = {
+    id: input.id,
+    sourceTraceId: input.sourceProposal.sourceTraceId,
+    campaign,
+    validationStatus: validationErrors.length > 0 ? "invalid" : "valid",
+    validationErrors,
+    createdByUserId: input.createdByUserId,
+    createdAt: input.createdAt,
+  };
+
+  input.proposalStore.saveCampaignProposal(proposal);
+
+  return proposal;
+}
+
 function inferCampaignSeason(trace: MetricsTrace): Campaign["season"] {
   return trace.question.toLowerCase().includes("secret santa") ? "secret-santa" : "fathers-day";
 }
@@ -62,7 +96,15 @@ function validateCampaignProposal(campaign: Campaign, products: Product[]): stri
   }
 
   const validProductIds = new Set(products.map((product) => product.id));
-  return parsed.data.productIds
+  const errors = parsed.data.productIds
     .filter((productId) => !validProductIds.has(productId))
     .map((productId) => `Campaign references unknown product "${productId}".`);
+
+  if (parsed.data.season === "secret-santa") {
+    for (const product of findProductsOverPriceLimit(parsed.data.productIds, products, 50)) {
+      errors.push(`Secret Santa campaign product "${product.name}" exceeds the £50 limit.`);
+    }
+  }
+
+  return errors;
 }

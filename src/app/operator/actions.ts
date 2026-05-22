@@ -5,7 +5,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/app/auth/session";
 import { requirePermission } from "@/domain/auth";
-import { proposeCampaignFromMetricsTrace } from "@/domain/operatorCampaign";
+import {
+  proposeCampaignFromMetricsTrace,
+  revampCampaignProposalForSeason,
+} from "@/domain/operatorCampaign";
 import { generateStorefrontConfigFromProposal } from "@/domain/storefrontGeneration";
 import { publishStorefrontConfig, rollbackStorefrontVersion } from "@/domain/storefrontPublishing";
 import { products } from "@/fixtures/products";
@@ -76,6 +79,40 @@ export async function generateStorefrontConfigAction(formData: FormData) {
 
   revalidatePath("/operator");
   redirect(`/operator?proposal=${proposalId}&storefront=${storefrontConfigId}`);
+}
+
+export async function revampSecretSantaProposalAction(formData: FormData) {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    redirect("/");
+  }
+
+  requirePermission(user, "approve_campaign");
+
+  const proposalId = String(formData.get("proposalId") ?? "");
+  const database = getAppDatabase();
+  const sourceProposal = database.findCampaignProposalById(proposalId);
+
+  if (!sourceProposal) {
+    throw new Error("Campaign proposal was not found for Secret Santa revamp.");
+  }
+
+  const revampedProposalId = randomUUID();
+
+  await revampCampaignProposalForSeason({
+    id: revampedProposalId,
+    sourceProposal,
+    season: "secret-santa",
+    harness: fixtureCodexHarness,
+    products,
+    createdByUserId: user.id,
+    createdAt: new Date(),
+    proposalStore: database,
+  });
+
+  revalidatePath("/operator");
+  redirect(`/operator?proposal=${revampedProposalId}`);
 }
 
 export async function publishStorefrontConfigAction(formData: FormData) {

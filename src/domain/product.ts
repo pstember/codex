@@ -16,3 +16,16 @@ export const productSchema = z.object({
 });
 
 export type Product = z.infer<typeof productSchema>;
+
+export function findProductsOverPriceLimit(
+  productIds: string[],
+  products: Product[],
+  priceLimit: number,
+): Product[] {
+  const productsById = new Map(products.map((product) => [product.id, product]));
+
+  return productIds
+    .map((productId) => productsById.get(productId))
+    .filter((product): product is Product => product !== undefined)
+    .filter((product) => product.price > priceLimit);
+}

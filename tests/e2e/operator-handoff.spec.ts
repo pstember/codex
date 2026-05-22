@@ -1,8 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("Operator generates a campaign proposal from the latest Manager metrics handoff", async ({
-  page,
-}) => {
+test("Operator publishes Father’s Day and revamps it into Secret Santa", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Mara Chen manager" }).click();
   await page.waitForURL("**/manager");
@@ -49,14 +47,41 @@ test("Operator generates a campaign proposal from the latest Manager metrics han
   await expect(page.getByText("Campaign changed")).toBeVisible();
   await expect(page.getByText("Product changes")).toBeVisible();
 
+  await page.getByRole("button", { name: "Revamp for Secret Santa" }).click();
+  await page.waitForURL(/\/operator\?proposal=/);
+
+  await expect(
+    page.getByRole("heading", { name: "Secret Santa Gifts That Look Effortless" }),
+  ).toBeVisible();
+  await expect(page.getByRole("cell", { name: "Pour-Over Coffee Set" })).toBeVisible();
+  await expect(page.getByText("under £50")).toBeVisible();
+
+  await page.getByRole("button", { name: "Approve proposal" }).click();
+  await page.waitForURL(/\/operator\?proposal=.*&storefront=/);
+
+  await expect(
+    page.getByRole("heading", { exact: true, level: 2, name: "Secret Santa" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      name: "Secret Santa gifts under £50 that do not feel last-minute.",
+    }),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "Publish storefront" }).click();
+  await page.waitForURL(/\/operator\?storefront=.*&version=/);
+
+  await expect(page.getByText("Active Guest version: Secret Santa")).toBeVisible();
+  await expect(page.getByText("Baseline Atlas & Co. to Secret Santa")).toBeVisible();
+
   await page.getByRole("link", { name: "Open Guest storefront" }).click();
   await page.waitForURL("**/store");
 
-  await expect(page.getByText("Father’s Day", { exact: true })).toBeVisible();
+  await expect(page.getByText("Secret Santa", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("heading", {
-      name: "Father’s Day gifts for grill masters, travelers, and everyday fixers.",
+      name: "Secret Santa gifts under £50 that do not feel last-minute.",
     }),
   ).toBeVisible();
-  await expect(page.getByText("Portable Charcoal Grill")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Pour-Over Coffee Set" })).toBeVisible();
 });

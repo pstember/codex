@@ -71,3 +71,9 @@ Rationale: frequent checkpoints make it easier to inspect, bisect, or revert a s
 Use `next dev --webpack` and `next build --webpack` while the app depends on Node's built-in `node:sqlite`.
 
 Rationale: Next 16 Turbopack currently fails to load `node:sqlite` in this app, while the deterministic local demo needs SQLite persistence available during development and builds.
+
+## 2026-05-22 - Secret Santa price limit validation
+
+Enforce the under-£50 Secret Santa constraint at both campaign proposal validation and storefront config validation.
+
+Rationale: the seasonal revamp is fixture-backed for now, but generated output must still be server-validated before persistence or publishing.

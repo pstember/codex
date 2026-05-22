@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { CampaignProposal } from "@/domain/operatorCampaign";
-import type { Product } from "@/domain/product";
+import { findProductsOverPriceLimit, type Product } from "@/domain/product";
 import {
   type StorefrontConfig,
   storefrontConfigSchema,
@@ -82,6 +82,14 @@ function validateGeneratedStorefrontConfig(
 
   for (const productId of unknownProductIds) {
     errors.push(`Storefront section references unknown product "${productId}".`);
+  }
+
+  if (proposal.campaign.season === "secret-santa") {
+    const storefrontProductIds = parsed.data.sections.flatMap((section) => section.productIds);
+
+    for (const product of findProductsOverPriceLimit(storefrontProductIds, products, 50)) {
+      errors.push(`Secret Santa storefront product "${product.name}" exceeds the £50 limit.`);
+    }
   }
 
   return errors;

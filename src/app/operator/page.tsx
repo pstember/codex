@@ -4,6 +4,7 @@ import {
   generateCampaignProposalAction,
   generateStorefrontConfigAction,
   publishStorefrontConfigAction,
+  revampSecretSantaProposalAction,
   rollbackStorefrontVersionAction,
 } from "@/app/operator/actions";
 import { compareStorefrontVersions } from "@/domain/storefrontPublishing";
@@ -183,15 +184,28 @@ export default async function OperatorPage({
                   </ul>
                 ) : null}
                 {selectedProposal.validationStatus === "valid" ? (
-                  <form action={generateStorefrontConfigAction} className="mt-5">
-                    <input name="proposalId" type="hidden" value={selectedProposal.id} />
-                    <button
-                      className="rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold text-white"
-                      type="submit"
-                    >
-                      Approve proposal
-                    </button>
-                  </form>
+                  <div className="mt-5 flex flex-wrap gap-3">
+                    <form action={generateStorefrontConfigAction}>
+                      <input name="proposalId" type="hidden" value={selectedProposal.id} />
+                      <button
+                        className="rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold text-white"
+                        type="submit"
+                      >
+                        Approve proposal
+                      </button>
+                    </form>
+                    {selectedProposal.campaign.season === "fathers-day" ? (
+                      <form action={revampSecretSantaProposalAction}>
+                        <input name="proposalId" type="hidden" value={selectedProposal.id} />
+                        <button
+                          className="rounded-md border border-rose-700 px-4 py-2 text-sm font-semibold text-rose-800"
+                          type="submit"
+                        >
+                          Revamp for Secret Santa
+                        </button>
+                      </form>
+                    ) : null}
+                  </div>
                 ) : null}
                 <div className="mt-6 overflow-hidden rounded-md border border-neutral-200">
                   <table className="w-full text-left text-sm">
