@@ -83,3 +83,9 @@ Rationale: the seasonal revamp is fixture-backed for now, but generated output m
 Storefront configs now carry validated hero visual asset metadata generated through the image harness, with fixture assets used for deterministic demo runs.
 
 Rationale: Secret Santa needs a visible creative transformation, but visual output should remain traceable, server-validated data rather than ad hoc UI decoration or live generation.
+
+## 2026-05-22 - Guest version previews are explicit query-state
+
+Let the Guest storefront resolve `?version=baseline` or a published version id while `/store` continues to default to the active published version.
+
+Rationale: Time Machine should be demoable from the customer-facing surface without changing publication history, and inactive versions should remain previewable by explicit, auditable URL state.

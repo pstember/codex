@@ -93,4 +93,16 @@ test("Operator publishes Father’s Day and revamps it into Secret Santa", async
     }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Pour-Over Coffee Set" })).toBeVisible();
+
+  await page.getByLabel("Preview version").selectOption({ label: "Father’s Day (inactive)" });
+  await page.getByRole("button", { name: "View version" }).click();
+  await page.waitForURL(/\/store\?version=/);
+
+  await expect(page.getByText("Previewing inactive version")).toBeVisible();
+  await expect(page.getByText("Father’s Day", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      name: "Father’s Day gifts for grill masters, travelers, and everyday fixers.",
+    }),
+  ).toBeVisible();
 });

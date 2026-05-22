@@ -51,6 +51,18 @@ export interface StorefrontVersionComparison {
   };
 }
 
+export interface GuestStorefrontSelection {
+  storefront: StorefrontConfig;
+  selectedVersionId: string;
+  activeVersionId: string | null;
+  statusLabel: string;
+  options: Array<{
+    id: string;
+    label: string;
+    status: "baseline" | StorefrontVersionStatus;
+  }>;
+}
+
 export function publishStorefrontConfig({
   id,
   storefrontConfig,
@@ -81,6 +93,43 @@ export function publishStorefrontConfig({
   publicationStore.savePublishedStorefrontVersion(version);
 
   return version;
+}
+
+export function resolveGuestStorefrontSelection({
+  requestedVersionId,
+  activeVersion,
+  publishedVersions,
+  baseline,
+}: {
+  requestedVersionId?: string;
+  activeVersion: PublishedStorefrontVersion | null;
+  publishedVersions: PublishedStorefrontVersion[];
+  baseline: StorefrontConfig;
+}): GuestStorefrontSelection {
+  const requestedPublishedVersion =
+    requestedVersionId && requestedVersionId !== "baseline"
+      ? (publishedVersions.find((version) => version.id === requestedVersionId) ?? null)
+      : null;
+  const selectedVersion =
+    requestedVersionId === "baseline"
+      ? null
+      : (requestedPublishedVersion ?? activeVersion ?? publishedVersions[0] ?? null);
+  const selectedVersionId = requestedVersionId === "baseline" ? "baseline" : selectedVersion?.id;
+
+  return {
+    storefront: selectedVersion?.config ?? baseline,
+    selectedVersionId: selectedVersionId ?? "baseline",
+    activeVersionId: activeVersion?.id ?? null,
+    statusLabel: getGuestVersionStatusLabel(selectedVersion, activeVersion),
+    options: [
+      { id: "baseline", label: baseline.versionName, status: "baseline" },
+      ...publishedVersions.map((version) => ({
+        id: version.id,
+        label: version.config.versionName,
+        status: version.status,
+      })),
+    ],
+  };
 }
 
 export function compareStorefrontVersions({
@@ -125,6 +174,21 @@ export function compareStorefrontVersions({
 
 function getHeroSection(config: StorefrontConfig) {
   return config.sections.find((section) => section.type === "hero") ?? config.sections[0];
+}
+
+function getGuestVersionStatusLabel(
+  selectedVersion: PublishedStorefrontVersion | null,
+  activeVersion: PublishedStorefrontVersion | null,
+) {
+  if (!selectedVersion) {
+    return "Previewing baseline";
+  }
+
+  if (selectedVersion.id === activeVersion?.id) {
+    return "Viewing active version";
+  }
+
+  return "Previewing inactive version";
 }
 
 function buildStrategicSummary(

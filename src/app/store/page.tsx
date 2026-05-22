@@ -3,14 +3,28 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import { getCurrentUser } from "@/app/auth/session";
 import type { StorefrontConfig } from "@/domain/storefront";
+import { resolveGuestStorefrontSelection } from "@/domain/storefrontPublishing";
 import { products } from "@/fixtures/products";
 import { baselineStorefront } from "@/fixtures/storefront";
 import { getAppDatabase } from "@/persistence/appDatabase";
 
-export default async function StorePage() {
+export default async function StorePage({
+  searchParams,
+}: {
+  searchParams?: Promise<{
+    version?: string;
+  }>;
+}) {
   const user = await getCurrentUser();
-  const activeVersion = getAppDatabase().findActiveStorefrontVersion();
-  const storefront = activeVersion?.config ?? baselineStorefront;
+  const params = await searchParams;
+  const database = getAppDatabase();
+  const selection = resolveGuestStorefrontSelection({
+    requestedVersionId: params?.version,
+    activeVersion: database.findActiveStorefrontVersion(),
+    publishedVersions: database.listPublishedStorefrontVersions(),
+    baseline: baselineStorefront,
+  });
+  const storefront = selection.storefront;
   const hero =
     storefront.sections.find((section) => section.type === "hero") ?? storefront.sections[0];
 
@@ -25,6 +39,42 @@ export default async function StorePage() {
             {user ? `Viewing as ${user.name}` : "Public storefront"}
           </p>
         </nav>
+        <form
+          className="mt-6 flex flex-wrap items-end justify-between gap-3 border-b border-neutral-200 pb-5 text-sm"
+          method="get"
+        >
+          <label className="grid min-w-64 gap-2 font-semibold text-neutral-900">
+            Preview version
+            <select
+              className="rounded-md border border-neutral-300 bg-white px-3 py-2 font-normal text-neutral-900"
+              defaultValue={selection.selectedVersionId}
+              name="version"
+            >
+              {selection.options.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label} ({option.status})
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="font-semibold text-neutral-700">{selection.statusLabel}</p>
+            {selection.activeVersionId ? (
+              <Link
+                className="rounded-md border border-neutral-300 px-4 py-2 font-semibold text-neutral-900"
+                href={`/store?version=${selection.activeVersionId}`}
+              >
+                Active version
+              </Link>
+            ) : null}
+            <button
+              className="rounded-md bg-neutral-950 px-4 py-2 font-semibold text-white"
+              type="submit"
+            >
+              View version
+            </button>
+          </div>
+        </form>
         <div className="grid min-h-[58vh] items-center gap-8 py-12 lg:grid-cols-[1.1fr_0.9fr]">
           <div>
             <p className="text-sm font-semibold uppercase tracking-wide text-[var(--storefront-accent)]">

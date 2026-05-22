@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
+import type { StorefrontConfig } from "@/domain/storefront";
 import type { GeneratedStorefrontConfig } from "@/domain/storefrontGeneration";
 import {
   compareStorefrontVersions,
   publishStorefrontConfig,
+  resolveGuestStorefrontSelection,
   rollbackStorefrontVersion,
 } from "@/domain/storefrontPublishing";
 import {
@@ -202,6 +204,98 @@ describe("storefront publishing", () => {
       }).strategicSummary,
     ).toEqual(["Campaign stayed on Father’s Day."]);
   });
+
+  it("resolves an explicit Guest storefront version even when it is inactive", () => {
+    const activeVersion = publishedVersion({
+      id: "version-2",
+      config: secretSantaStorefront,
+      status: "active",
+    });
+    const inactiveVersion = publishedVersion({
+      id: "version-1",
+      config: fatherDayStorefront,
+      status: "inactive",
+      publishedAt: new Date("2026-05-22T15:00:00.000Z"),
+    });
+
+    const selected = resolveGuestStorefrontSelection({
+      requestedVersionId: "version-1",
+      activeVersion,
+      publishedVersions: [activeVersion, inactiveVersion],
+      baseline: baselineStorefront,
+    });
+
+    expect(selected).toMatchObject({
+      storefront: fatherDayStorefront,
+      selectedVersionId: "version-1",
+      activeVersionId: "version-2",
+      statusLabel: "Previewing inactive version",
+      options: [
+        { id: "baseline", label: "Baseline Atlas & Co.", status: "baseline" },
+        { id: "version-2", label: "Secret Santa", status: "active" },
+        { id: "version-1", label: "Father’s Day", status: "inactive" },
+      ],
+    });
+  });
+
+  it("defaults the Guest storefront to the active version and falls back from unknown ids", () => {
+    const activeVersion = publishedVersion({
+      id: "version-2",
+      config: secretSantaStorefront,
+      status: "active",
+    });
+    const inactiveVersion = publishedVersion({
+      id: "version-1",
+      config: fatherDayStorefront,
+      status: "inactive",
+    });
+
+    expect(
+      resolveGuestStorefrontSelection({
+        activeVersion,
+        publishedVersions: [activeVersion, inactiveVersion],
+        baseline: baselineStorefront,
+      }),
+    ).toMatchObject({
+      storefront: secretSantaStorefront,
+      selectedVersionId: "version-2",
+      statusLabel: "Viewing active version",
+    });
+    expect(
+      resolveGuestStorefrontSelection({
+        requestedVersionId: "missing-version",
+        activeVersion,
+        publishedVersions: [activeVersion, inactiveVersion],
+        baseline: baselineStorefront,
+      }),
+    ).toMatchObject({
+      storefront: secretSantaStorefront,
+      selectedVersionId: "version-2",
+      statusLabel: "Viewing active version",
+    });
+  });
+
+  it("lets Guests explicitly preview the baseline storefront", () => {
+    const activeVersion = publishedVersion({
+      id: "version-2",
+      config: secretSantaStorefront,
+      status: "active",
+    });
+
+    expect(
+      resolveGuestStorefrontSelection({
+        requestedVersionId: "baseline",
+        activeVersion,
+        publishedVersions: [activeVersion],
+        baseline: baselineStorefront,
+      }),
+    ).toMatchObject({
+      storefront: baselineStorefront,
+      selectedVersionId: "baseline",
+      activeVersionId: "version-2",
+      statusLabel: "Previewing baseline",
+    });
+  });
 });
 
 const fatherDayGeneratedConfig: GeneratedStorefrontConfig = {
@@ -213,3 +307,26 @@ const fatherDayGeneratedConfig: GeneratedStorefrontConfig = {
   createdByUserId: "demo-operator",
   createdAt: new Date("2026-05-22T14:00:00.000Z"),
 };
+
+function publishedVersion({
+  id,
+  config,
+  status,
+  publishedAt = new Date("2026-05-22T16:00:00.000Z"),
+}: {
+  id: string;
+  config: StorefrontConfig;
+  status: "active" | "inactive";
+  publishedAt?: Date;
+}) {
+  return {
+    id,
+    sourceStorefrontConfigId:
+      config.campaignId === "secret-santa-2026" ? "storefront-draft-2" : "storefront-draft-1",
+    config,
+    status,
+    rollbackOfVersionId: null,
+    publishedByUserId: "demo-operator",
+    publishedAt,
+  };
+}
