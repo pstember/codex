@@ -48,6 +48,12 @@ Generate Operator campaign proposals from persisted Metrics Copilot traces and s
 
 Rationale: this keeps the Manager and Operator roles separated while preserving a traceable handoff from insight to campaign activation.
 
+## 2026-05-22 - Storefront configs from approved proposals
+
+Generate fixture-backed storefront configs only from valid Operator campaign proposals, validate section schema, campaign linkage, and product references server-side, then persist the generated config to SQLite for review.
+
+Rationale: the storefront step must stay traceable and constrained before publishing exists, while still proving Codex can turn an approved campaign into renderable storefront structure.
+
 ## 2026-05-22 - Commit completed slices as checkpoints
 
 Commit completed, tested slices as work progresses instead of letting large unstaged diffs accumulate.

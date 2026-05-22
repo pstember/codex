@@ -1,24 +1,32 @@
 import { requireCurrentUser } from "@/app/auth/session";
 import { AppChrome } from "@/app/components/AppChrome";
-import { generateCampaignProposalAction } from "@/app/operator/actions";
+import {
+  generateCampaignProposalAction,
+  generateStorefrontConfigAction,
+} from "@/app/operator/actions";
 import { products } from "@/fixtures/products";
 import { getAppDatabase } from "@/persistence/appDatabase";
 
 export default async function OperatorPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ trace?: string; proposal?: string }>;
+  searchParams?: Promise<{ trace?: string; proposal?: string; storefront?: string }>;
 }) {
   const user = await requireCurrentUser("publish_storefront");
   const params = await searchParams;
   const database = getAppDatabase();
   const traces = database.listRecentMetricsTraces();
   const proposals = database.listRecentCampaignProposals();
+  const storefrontConfigs = database.listRecentStorefrontConfigs();
   const selectedTrace =
     (params?.trace ? database.findMetricsTraceById(params.trace) : null) ?? traces[0] ?? null;
   const selectedProposal =
     (params?.proposal ? database.findCampaignProposalById(params.proposal) : null) ??
     proposals[0] ??
+    null;
+  const selectedStorefrontConfig =
+    (params?.storefront ? database.findStorefrontConfigById(params.storefront) : null) ??
+    storefrontConfigs.find((config) => config.sourceProposalId === selectedProposal?.id) ??
     null;
   const productsById = new Map(products.map((product) => [product.id, product]));
 
@@ -136,6 +144,17 @@ export default async function OperatorPage({
                     ))}
                   </ul>
                 ) : null}
+                {selectedProposal.validationStatus === "valid" ? (
+                  <form action={generateStorefrontConfigAction} className="mt-5">
+                    <input name="proposalId" type="hidden" value={selectedProposal.id} />
+                    <button
+                      className="rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold text-white"
+                      type="submit"
+                    >
+                      Approve proposal
+                    </button>
+                  </form>
+                ) : null}
                 <div className="mt-6 overflow-hidden rounded-md border border-neutral-200">
                   <table className="w-full text-left text-sm">
                     <thead className="bg-neutral-100 text-neutral-600">
@@ -168,6 +187,64 @@ export default async function OperatorPage({
             ) : (
               <p className="mt-3 text-sm leading-6 text-neutral-600">
                 Generate the first fixture-backed proposal from a Manager handoff.
+              </p>
+            )}
+          </div>
+
+          <div className="rounded-lg border border-neutral-300 bg-white p-6">
+            <p className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
+              Storefront config
+            </p>
+            {selectedStorefrontConfig ? (
+              <>
+                <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-2xl font-semibold">
+                      {selectedStorefrontConfig.config.versionName}
+                    </h2>
+                    <p className="mt-2 text-sm leading-6 text-neutral-700">
+                      {selectedStorefrontConfig.config.sections.length} approved sections ·{" "}
+                      {selectedStorefrontConfig.config.style.theme} theme ·{" "}
+                      {selectedStorefrontConfig.config.style.density} density
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-800">
+                    {selectedStorefrontConfig.validationStatus}
+                  </span>
+                </div>
+                {selectedStorefrontConfig.validationErrors.length > 0 ? (
+                  <ul className="mt-4 space-y-1 text-sm text-red-700">
+                    {selectedStorefrontConfig.validationErrors.map((error) => (
+                      <li key={error}>{error}</li>
+                    ))}
+                  </ul>
+                ) : null}
+                <div className="mt-5 grid gap-3">
+                  {selectedStorefrontConfig.config.sections.map((section) => (
+                    <article className="rounded-md border border-neutral-200 p-4" key={section.id}>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <h3 className="text-base font-semibold">{section.title}</h3>
+                        <span className="rounded-full bg-neutral-100 px-2 py-1 text-xs font-semibold uppercase tracking-wide text-neutral-600">
+                          {section.type}
+                        </span>
+                      </div>
+                      {section.body ? (
+                        <p className="mt-2 text-sm leading-6 text-neutral-600">{section.body}</p>
+                      ) : null}
+                      {section.productIds.length > 0 ? (
+                        <p className="mt-3 text-sm text-neutral-700">
+                          {section.productIds
+                            .map((productId) => productsById.get(productId)?.name ?? productId)
+                            .join(", ")}
+                        </p>
+                      ) : null}
+                    </article>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <p className="mt-3 text-sm leading-6 text-neutral-600">
+                Approve a valid campaign proposal to generate a fixture-backed storefront config.
               </p>
             )}
           </div>

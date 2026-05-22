@@ -146,4 +146,73 @@ describe("commerce SQLite database", () => {
       database.close();
     }
   });
+
+  it("persists generated storefront configs for Operator review", () => {
+    const database = createCommerceDatabase();
+
+    try {
+      database.saveStorefrontConfig({
+        id: "storefront-draft-1",
+        sourceProposalId: "proposal-1",
+        config: {
+          id: "fathers-day-storefront",
+          campaignId: "fathers-day-2026",
+          versionName: "Father’s Day",
+          style: {
+            theme: "summer",
+            accentColor: "#b45309",
+            density: "editorial",
+          },
+          sections: [
+            {
+              id: "fd-hero",
+              type: "hero",
+              title: "Father’s Day gifts",
+              body: "Practical picks.",
+              productIds: ["portable-charcoal-grill"],
+            },
+          ],
+        },
+        validationStatus: "valid",
+        validationErrors: [],
+        createdByUserId: "demo-operator",
+        createdAt: new Date("2026-05-22T14:00:00.000Z"),
+      });
+
+      expect(database.listRecentStorefrontConfigs()).toEqual([
+        {
+          id: "storefront-draft-1",
+          sourceProposalId: "proposal-1",
+          config: {
+            id: "fathers-day-storefront",
+            campaignId: "fathers-day-2026",
+            versionName: "Father’s Day",
+            style: {
+              theme: "summer",
+              accentColor: "#b45309",
+              density: "editorial",
+            },
+            sections: [
+              {
+                id: "fd-hero",
+                type: "hero",
+                title: "Father’s Day gifts",
+                body: "Practical picks.",
+                productIds: ["portable-charcoal-grill"],
+              },
+            ],
+          },
+          validationStatus: "valid",
+          validationErrors: [],
+          createdByUserId: "demo-operator",
+          createdAt: new Date("2026-05-22T14:00:00.000Z"),
+        },
+      ]);
+      expect(database.findStorefrontConfigById("storefront-draft-1")?.sourceProposalId).toBe(
+        "proposal-1",
+      );
+    } finally {
+      database.close();
+    }
+  });
 });

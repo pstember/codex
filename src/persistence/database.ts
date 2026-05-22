@@ -3,6 +3,7 @@ import type { AuthStore } from "@/domain/auth";
 import type { MetricsTrace } from "@/domain/metricsTrace";
 import type { CampaignProposal } from "@/domain/operatorCampaign";
 import type { Product } from "@/domain/product";
+import type { GeneratedStorefrontConfig } from "@/domain/storefrontGeneration";
 import type { AuthenticatedUser, User } from "@/domain/users";
 
 const { DatabaseSync } = createRequire(import.meta.url)(
@@ -21,6 +22,9 @@ export interface CommerceDatabase extends AuthStore {
   saveCampaignProposal(proposal: CampaignProposal): void;
   listRecentCampaignProposals(limit?: number): CampaignProposal[];
   findCampaignProposalById(id: string): CampaignProposal | null;
+  saveStorefrontConfig(storefrontConfig: GeneratedStorefrontConfig): void;
+  listRecentStorefrontConfigs(limit?: number): GeneratedStorefrontConfig[];
+  findStorefrontConfigById(id: string): GeneratedStorefrontConfig | null;
 }
 
 export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
@@ -70,6 +74,16 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
       id TEXT PRIMARY KEY,
       source_trace_id TEXT NOT NULL,
       campaign_json TEXT NOT NULL,
+      validation_status TEXT NOT NULL,
+      validation_errors_json TEXT NOT NULL,
+      created_by_user_id TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS storefront_configs (
+      id TEXT PRIMARY KEY,
+      source_proposal_id TEXT NOT NULL,
+      config_json TEXT NOT NULL,
       validation_status TEXT NOT NULL,
       validation_errors_json TEXT NOT NULL,
       created_by_user_id TEXT NOT NULL,
@@ -267,6 +281,53 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
     WHERE id = ?;
   `);
 
+  const insertStorefrontConfig = database.prepare(`
+    INSERT INTO storefront_configs (
+      id,
+      source_proposal_id,
+      config_json,
+      validation_status,
+      validation_errors_json,
+      created_by_user_id,
+      created_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      source_proposal_id = excluded.source_proposal_id,
+      config_json = excluded.config_json,
+      validation_status = excluded.validation_status,
+      validation_errors_json = excluded.validation_errors_json,
+      created_by_user_id = excluded.created_by_user_id,
+      created_at = excluded.created_at;
+  `);
+
+  const listStorefrontConfigs = database.prepare(`
+    SELECT
+      id,
+      source_proposal_id AS sourceProposalId,
+      config_json AS configJson,
+      validation_status AS validationStatus,
+      validation_errors_json AS validationErrorsJson,
+      created_by_user_id AS createdByUserId,
+      created_at AS createdAt
+    FROM storefront_configs
+    ORDER BY created_at DESC
+    LIMIT ?;
+  `);
+
+  const findStorefrontConfig = database.prepare(`
+    SELECT
+      id,
+      source_proposal_id AS sourceProposalId,
+      config_json AS configJson,
+      validation_status AS validationStatus,
+      validation_errors_json AS validationErrorsJson,
+      created_by_user_id AS createdByUserId,
+      created_at AS createdAt
+    FROM storefront_configs
+    WHERE id = ?;
+  `);
+
   function parseMetricsTraceRow(row: {
     id: string;
     question: string;
@@ -308,6 +369,26 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
       id: row.id,
       sourceTraceId: row.sourceTraceId,
       campaign: JSON.parse(row.campaignJson) as CampaignProposal["campaign"],
+      validationStatus: row.validationStatus,
+      validationErrors: JSON.parse(row.validationErrorsJson) as string[],
+      createdByUserId: row.createdByUserId,
+      createdAt: new Date(row.createdAt),
+    };
+  }
+
+  function parseStorefrontConfigRow(row: {
+    id: string;
+    sourceProposalId: string;
+    configJson: string;
+    validationStatus: GeneratedStorefrontConfig["validationStatus"];
+    validationErrorsJson: string;
+    createdByUserId: string;
+    createdAt: string;
+  }): GeneratedStorefrontConfig {
+    return {
+      id: row.id,
+      sourceProposalId: row.sourceProposalId,
+      config: JSON.parse(row.configJson) as GeneratedStorefrontConfig["config"],
       validationStatus: row.validationStatus,
       validationErrors: JSON.parse(row.validationErrorsJson) as string[],
       createdByUserId: row.createdByUserId,
@@ -465,6 +546,31 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
         | undefined;
 
       return row ? parseCampaignProposalRow(row) : null;
+    },
+    saveStorefrontConfig(storefrontConfig) {
+      insertStorefrontConfig.run(
+        storefrontConfig.id,
+        storefrontConfig.sourceProposalId,
+        JSON.stringify(storefrontConfig.config),
+        storefrontConfig.validationStatus,
+        JSON.stringify(storefrontConfig.validationErrors),
+        storefrontConfig.createdByUserId,
+        storefrontConfig.createdAt.toISOString(),
+      );
+    },
+    listRecentStorefrontConfigs(limit = 5) {
+      const rows = listStorefrontConfigs.all(limit) as Array<
+        Parameters<typeof parseStorefrontConfigRow>[0]
+      >;
+
+      return rows.map(parseStorefrontConfigRow);
+    },
+    findStorefrontConfigById(id) {
+      const row = findStorefrontConfig.get(id) as
+        | Parameters<typeof parseStorefrontConfigRow>[0]
+        | undefined;
+
+      return row ? parseStorefrontConfigRow(row) : null;
     },
   };
 }

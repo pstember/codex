@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/app/auth/session";
 import { requirePermission } from "@/domain/auth";
 import { proposeCampaignFromMetricsTrace } from "@/domain/operatorCampaign";
+import { generateStorefrontConfigFromProposal } from "@/domain/storefrontGeneration";
 import { products } from "@/fixtures/products";
 import { fixtureCodexHarness } from "@/harness/codexHarness";
 import { getAppDatabase } from "@/persistence/appDatabase";
@@ -41,4 +42,37 @@ export async function generateCampaignProposalAction(formData: FormData) {
 
   revalidatePath("/operator");
   redirect(`/operator?proposal=${proposalId}`);
+}
+
+export async function generateStorefrontConfigAction(formData: FormData) {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    redirect("/");
+  }
+
+  requirePermission(user, "publish_storefront");
+
+  const proposalId = String(formData.get("proposalId") ?? "");
+  const database = getAppDatabase();
+  const proposal = database.findCampaignProposalById(proposalId);
+
+  if (!proposal) {
+    throw new Error("Campaign proposal was not found for storefront config generation.");
+  }
+
+  const storefrontConfigId = randomUUID();
+
+  await generateStorefrontConfigFromProposal({
+    id: storefrontConfigId,
+    proposal,
+    harness: fixtureCodexHarness,
+    products,
+    createdByUserId: user.id,
+    createdAt: new Date(),
+    storefrontStore: database,
+  });
+
+  revalidatePath("/operator");
+  redirect(`/operator?proposal=${proposalId}&storefront=${storefrontConfigId}`);
 }

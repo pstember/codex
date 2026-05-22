@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot with GraphQL validation, chart mapping, saved traces, Operator handoff, and fixture-backed campaign proposal generation.
+Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot with GraphQL validation, chart mapping, saved traces, Operator handoff, fixture-backed campaign proposal generation, and fixture-backed storefront config generation.
 
 ## Completed
 
@@ -38,15 +38,20 @@ Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot w
 - Added SQLite persistence for validated Operator campaign proposals.
 - Added an Operator page handoff picker, campaign proposal generator action, and proposal review panel.
 - Added a Playwright e2e smoke for the Manager saved-run to Operator proposal path.
+- Added a tested Operator storefront config generation flow from valid campaign proposals.
+- Added server-side storefront config validation for schema, campaign linkage, approved sections, and product references.
+- Added SQLite persistence for generated storefront configs.
+- Updated the Operator page so a valid proposal can be approved into a fixture-backed storefront config and reviewed by section.
+- Extended the Playwright e2e smoke through proposal approval and storefront config rendering.
 
 ## Test Status
 
-- `npm run typecheck`: passing after `next build` regenerated `.next/types`.
+- `npm run typecheck`: passing.
 - `npm run lint`: passing.
-- `npm test`: passing, 9 files and 33 tests.
-- `npm run coverage`: passing, 90.3% statements, 90.32% lines, and 82.6% branches.
+- `npm test`: passing, 10 files and 36 tests.
+- `npm run coverage`: passing, 89.88% statements, 90.2% lines, and 80% branches.
 - `npm run build`: passing with `next build --webpack`.
-- Playwright e2e smoke: passing for Manager login, saved-run creation, Operator login, handoff selection, fixture-backed proposal generation, and proposal rendering.
+- Playwright e2e smoke: passing for Manager login, saved-run creation, Operator login, handoff selection, fixture-backed proposal generation, proposal approval, and storefront config rendering.
 
 ## Dependency Status
 
@@ -66,8 +71,8 @@ Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot w
 - Phase 1 auth is demo-grade and intentionally not a production auth provider.
 - Metrics Copilot traces persist for the approved Manager metric questions, with trace detail drilldown and saved-run comparison now available.
 - Storefront remains baseline only; campaign publishing and Time Machine are future phases.
-- Operator campaign proposals can be generated and reviewed, but approval, storefront config generation, publishing, rollback, and Time Machine remain future phases.
+- Operator campaign proposals can be generated and reviewed, and valid proposals can now generate validated storefront configs; publishing, rollback, Guest version selection, and Time Machine remain future phases.
 
 ## Next Recommended Task
 
-Continue Phase 1 by connecting an approved Operator campaign proposal to fixture-backed storefront config generation and validation.
+Continue Phase 1 by connecting validated Operator storefront configs to publishing controls, Guest storefront version rendering, and rollback/Time Machine groundwork.

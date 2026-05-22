@@ -25,4 +25,17 @@ test("Operator generates a campaign proposal from the latest Manager metrics han
   ).toBeVisible();
   await expect(page.getByText("Portable Charcoal Grill")).toBeVisible();
   await expect(page.locator("span").filter({ hasText: "valid" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Approve proposal" }).click();
+  await page.waitForURL(/\/operator\?proposal=.*&storefront=/);
+
+  await expect(page.getByText("Storefront config")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { exact: true, level: 2, name: "Father’s Day" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      name: "Father’s Day gifts for grill masters, travelers, and everyday fixers.",
+    }),
+  ).toBeVisible();
 });
