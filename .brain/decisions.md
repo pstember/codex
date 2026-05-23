@@ -121,3 +121,9 @@ Rationale: the demo should model a clearer staff security boundary while keeping
 Use `/` for the real anonymous storefront and keep `/store` as a compatibility redirect. Remove Mission Control and Loom replay as product surfaces.
 
 Rationale: the demo should feel like a real commerce product that can be driven live by a human, with observability around Codex runs instead of a scripted capture checklist.
+
+## 2026-05-23: Frontend Design Skill
+
+Use the project-local `frontend-design` skill for frontend component, page, and app work that needs distinctive, production-grade interface direction.
+
+Rationale: frontend work should avoid generic aesthetics and preserve a clear creative point of view while staying reviewable with the repo.
