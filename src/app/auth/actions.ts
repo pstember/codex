@@ -2,22 +2,23 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { getCurrentUser, sessionCookieName } from "@/app/auth/session";
-import { loginWithEmail, requirePermission } from "@/domain/auth";
+import { requireCurrentUser, sessionCookieName } from "@/app/auth/session";
+import { loginWithPassword } from "@/domain/auth";
 import { getAppDatabase } from "@/persistence/appDatabase";
 
 const routeByRole = {
   manager: "/manager",
   operator: "/operator",
-  guest: "/store",
+  guest: "/",
 } as const;
 
 export async function loginAction(formData: FormData) {
   const email = String(formData.get("email") ?? "");
-  const user = loginWithEmail(getAppDatabase(), email);
+  const password = String(formData.get("password") ?? "");
+  const user = loginWithPassword(getAppDatabase(), email, password);
 
   if (!user) {
-    redirect("/");
+    redirect("/admin?error=invalid");
   }
 
   const cookieStore = await cookies();
@@ -45,13 +46,7 @@ export async function logoutAction() {
 }
 
 export async function saveInsightAction() {
-  const user = await getCurrentUser();
-
-  if (!user) {
-    throw new Error("Authentication required.");
-  }
-
-  requirePermission(user, "ask_deep_metrics");
+  const user = await requireCurrentUser("ask_deep_metrics");
 
   return {
     ok: true,
@@ -60,13 +55,7 @@ export async function saveInsightAction() {
 }
 
 export async function publishStorefrontAction() {
-  const user = await getCurrentUser();
-
-  if (!user) {
-    throw new Error("Authentication required.");
-  }
-
-  requirePermission(user, "publish_storefront");
+  const user = await requireCurrentUser("publish_storefront");
 
   return {
     ok: true,

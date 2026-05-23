@@ -10,14 +10,12 @@ Demo roles:
 - Store Operator: approves campaigns and publishes storefront versions.
 - Guest: views the storefront.
 
-Start capture at Mission Control:
+Start at the real public shop:
 
-- Opening URL: `/?step=manager-insight`
-- After Manager analysis: `/?step=operator-proposal`
-- After Father’s Day publish: `/?step=secret-santa-revamp`
-- After Secret Santa publish: `/?step=guest-preview`
-
-Use the home-screen Loom capture checklist for stable links into the saved Manager trace, Operator workspace, Storefront Time Machine, and Guest close. If a run has not created an artifact yet, the checklist falls back to the role workspace instead of a missing detail URL.
+- Public storefront: `/`
+- Staff admin: `/admin`
+- Manager workspace: `/manager`
+- Operator workspace: `/operator`
 
 For a real Codex App Server demo, start the app with:
 
@@ -33,30 +31,27 @@ To show the real query path, use the Manager custom question box with a prompt s
 Which under £50 products have the best margin and enough inventory?
 ```
 
-Codex should translate it into a GraphQL `products(filter: { maxPrice: 50 })` query, the app should validate it, execute it against the seeded Atlas catalog, and save the trace.
+Codex should translate it into a valid query over the fixed commerce schema, the app should validate it, execute it against seeded Atlas data, persist Codex run events, and save the trace.
 
 ## Act 1: Father’s Day
 
-1. Open `/?step=manager-insight` and frame Mission Control.
-2. Log in as Store Manager and open `/manager`.
-3. Ask either the golden query “What should we promote for Father’s Day based on margin, inventory, and conversion?” or a live custom question in App Server mode.
-4. Show Codex run trace: schema read, GraphQL generated, query validated, data fetched, insight generated.
-5. Return to `/?step=operator-proposal` and show the checklist’s saved Manager trace link.
-6. Switch to Store Operator and open `/operator`.
-7. Generate and approve the Father’s Day storefront.
-8. Publish Father’s Day and show Storefront Time Machine from the checklist.
+1. Open `/` and show Atlas & Co. as an anonymous shopper.
+2. Switch demo persona, add an item to the cart, and show targeted promotion pricing.
+3. Open `/admin`, sign in as Store Manager, and run the Father’s Day golden query or a live custom question.
+4. Show the Codex live window: prompt prepared, schema sent, GraphQL generated, validation, query execution, trace saved.
+5. Sign in as Store Operator and open `/operator`.
+6. Generate and approve the Father’s Day storefront.
+7. Publish Father’s Day and open the public storefront at `/`.
 
 ## Act 2: Secret Santa
 
-1. Return to `/?step=secret-santa-revamp`.
-2. Operator asks: “Turn the Father’s Day campaign into a Secret Santa campaign under £50.”
-3. Show Codex trace: product reselection, copy rewrite, image prompt generation, storefront config validation.
-4. Show products re-framed by price band and giftability.
-5. Publish Secret Santa storefront.
-6. Return to `/?step=guest-preview`.
-7. Compare baseline, Father’s Day, and Secret Santa versions.
-8. Use the checklist’s Guest close link to end on `/store?version=<active-version-id>`.
+1. In Operator, run “Revamp for Secret Santa.”
+2. Show product reselection, copy rewrite, image prompt metadata, and storefront config validation.
+3. Show products reframed by price band and giftability.
+4. Publish Secret Santa storefront.
+5. Compare baseline, Father’s Day, and Secret Santa in Storefront Time Machine.
+6. End on `/` with the active Secret Santa storefront and anonymous cart.
 
 ## Closing Message
 
-The demo shows Codex embedded in a commerce workflow, not as a generic chatbot: it reads business context, generates validated queries and campaigns, updates the storefront, and preserves a traceable path from insight to action.
+The demo shows Codex embedded in a commerce workflow, not as a generic chatbot: it reads business context, generates validated GraphQL and campaigns, exposes the exchange as observable run events, updates the storefront, and preserves a traceable path from insight to action.

@@ -6,6 +6,7 @@ import type { AuthenticatedUser } from "@/domain/users";
 import { getAppDatabase } from "@/persistence/appDatabase";
 
 export const sessionCookieName = "commerce_copilot_session";
+export const adminLoginPath = "/admin";
 
 export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
   const cookieStore = await cookies();
@@ -22,7 +23,7 @@ export async function requireCurrentUser(permission: Permission): Promise<Authen
   const user = await getCurrentUser();
 
   if (!user) {
-    redirect("/");
+    redirect(adminLoginPath);
   }
 
   requirePermission(user, permission);

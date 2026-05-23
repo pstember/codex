@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/app/auth/session";
+import { requireCurrentUser } from "@/app/auth/session";
 import { requirePermission } from "@/domain/auth";
 import {
   proposeCampaignFromMetricsTrace,
@@ -16,11 +16,7 @@ import { getCodexHarness } from "@/harness/codexHarness";
 import { getAppDatabase } from "@/persistence/appDatabase";
 
 export async function generateCampaignProposalAction(formData: FormData) {
-  const user = await getCurrentUser();
-
-  if (!user) {
-    redirect("/");
-  }
+  const user = await requireCurrentUser("approve_campaign");
 
   requirePermission(user, "approve_campaign");
 
@@ -49,11 +45,7 @@ export async function generateCampaignProposalAction(formData: FormData) {
 }
 
 export async function generateStorefrontConfigAction(formData: FormData) {
-  const user = await getCurrentUser();
-
-  if (!user) {
-    redirect("/");
-  }
+  const user = await requireCurrentUser("publish_storefront");
 
   requirePermission(user, "publish_storefront");
 
@@ -82,11 +74,7 @@ export async function generateStorefrontConfigAction(formData: FormData) {
 }
 
 export async function revampSecretSantaProposalAction(formData: FormData) {
-  const user = await getCurrentUser();
-
-  if (!user) {
-    redirect("/");
-  }
+  const user = await requireCurrentUser("approve_campaign");
 
   requirePermission(user, "approve_campaign");
 
@@ -116,11 +104,7 @@ export async function revampSecretSantaProposalAction(formData: FormData) {
 }
 
 export async function publishStorefrontConfigAction(formData: FormData) {
-  const user = await getCurrentUser();
-
-  if (!user) {
-    redirect("/");
-  }
+  const user = await requireCurrentUser("publish_storefront");
 
   requirePermission(user, "publish_storefront");
 
@@ -141,16 +125,13 @@ export async function publishStorefrontConfigAction(formData: FormData) {
   });
 
   revalidatePath("/operator");
+  revalidatePath("/");
   revalidatePath("/store");
   redirect(`/operator?storefront=${storefrontConfigId}&version=${version.id}`);
 }
 
 export async function rollbackStorefrontVersionAction(formData: FormData) {
-  const user = await getCurrentUser();
-
-  if (!user) {
-    redirect("/");
-  }
+  const user = await requireCurrentUser("publish_storefront");
 
   requirePermission(user, "publish_storefront");
 
@@ -171,6 +152,7 @@ export async function rollbackStorefrontVersionAction(formData: FormData) {
   });
 
   revalidatePath("/operator");
+  revalidatePath("/");
   revalidatePath("/store");
   redirect(`/operator?version=${rollbackVersion.id}`);
 }

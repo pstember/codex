@@ -354,7 +354,7 @@ export default async function OperatorPage({
               </div>
               <a
                 className="rounded-md border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-900"
-                href="/store"
+                href="/"
               >
                 Open Guest storefront
               </a>

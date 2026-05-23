@@ -1,3 +1,4 @@
+import type { CommerceData } from "@/domain/commerce";
 import {
   executeCommerceQuery,
   type QueryValidationResult,
@@ -97,6 +98,7 @@ export async function answerMetricsQuestion(input: {
   question: string;
   harness: CodexHarness;
   products: Product[];
+  commerceData?: CommerceData;
 }): Promise<MetricsCopilotAnswer> {
   const generatedQuery = await input.harness.generateGraphQLQuery(input.question);
   const validation = validateCommerceQuery(generatedQuery);
@@ -105,6 +107,7 @@ export async function answerMetricsQuestion(input: {
   const queryProducts = await executeCommerceQuery({
     generatedQuery,
     products: input.products,
+    commerceData: input.commerceData,
   });
   const insightProducts = insight.recommendedProductIds
     .map((productId) => productsById.get(productId))
@@ -281,6 +284,7 @@ export async function answerAndSaveMetricsQuestion(input: {
   question: string;
   harness: CodexHarness;
   products: Product[];
+  commerceData?: CommerceData;
   createdByUserId: string;
   createdAt: Date;
   traceStore: MetricsTraceStore;

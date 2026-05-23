@@ -9,9 +9,10 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   webServer: {
-    command: "npm run dev",
+    command:
+      "rm -f /private/tmp/commerce-copilot-e2e.db && COMMERCE_DATABASE_PATH=/private/tmp/commerce-copilot-e2e.db npm run dev",
     url: "http://127.0.0.1:3000",
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
   },
   projects: [
     {

@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { AuthorizationError, loginWithEmail, requirePermission } from "@/domain/auth";
-import { demoUsers } from "@/fixtures/users";
+import { AuthorizationError, loginWithPassword, requirePermission } from "@/domain/auth";
+import { demoStaffPasswords, demoUsers } from "@/fixtures/users";
 import { createCommerceDatabase } from "@/persistence/database";
 
 describe("auth domain", () => {
-  it("logs in demo users case-insensitively and creates a session", () => {
+  it("logs in seeded staff by email and password and creates a session", () => {
     const database = createCommerceDatabase();
 
     try {
       database.seedUsers(demoUsers);
-      const user = loginWithEmail(database, " MANAGER@DEMO.COM ");
+      const user = loginWithPassword(database, " MANAGER@DEMO.COM ", demoStaffPasswords.manager);
 
       expect(user?.email).toBe("manager@demo.com");
       expect(user?.role).toBe("manager");
@@ -22,16 +22,27 @@ describe("auth domain", () => {
     }
   });
 
-  it("returns null for unknown demo users", () => {
+  it("rejects unknown emails, bad passwords, and guest logins", () => {
     const database = createCommerceDatabase();
 
     try {
       database.seedUsers(demoUsers);
 
-      expect(loginWithEmail(database, "unknown@demo.com")).toBeNull();
+      expect(
+        loginWithPassword(database, "unknown@demo.com", demoStaffPasswords.manager),
+      ).toBeNull();
+      expect(loginWithPassword(database, "manager@demo.com", "wrong-password")).toBeNull();
+      expect(loginWithPassword(database, "guest@demo.com", "guest")).toBeNull();
     } finally {
       database.close();
     }
+  });
+
+  it("seeds backend staff users without plaintext passwords or guest accounts", () => {
+    expect(demoUsers).toHaveLength(2);
+    expect(demoUsers.map((user) => user.role)).toEqual(["manager", "operator"]);
+    expect(demoUsers.every((user) => !("password" in user))).toBe(true);
+    expect(demoUsers.every((user) => user.passwordHash.length > 20)).toBe(true);
   });
 
   it("rejects expired sessions and removes them", () => {

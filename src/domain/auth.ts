@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID, scryptSync, timingSafeEqual } from "node:crypto";
 import type { Permission, Role } from "@/domain/roles";
 import { can } from "@/domain/roles";
 import type { AuthenticatedUser, Session, User } from "@/domain/users";
@@ -16,14 +16,32 @@ export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
-export function loginWithEmail(
+export function hashStaffPassword(password: string, salt: string): string {
+  return `scrypt:${salt}:${scryptSync(password, salt, 64).toString("hex")}`;
+}
+
+export function verifyStaffPassword(password: string, passwordHash: string): boolean {
+  const [algorithm, salt, hashHex] = passwordHash.split(":");
+
+  if (algorithm !== "scrypt" || !salt || !hashHex) {
+    return false;
+  }
+
+  const expected = Buffer.from(hashHex, "hex");
+  const actual = scryptSync(password, salt, expected.length);
+
+  return expected.length === actual.length && timingSafeEqual(expected, actual);
+}
+
+export function loginWithPassword(
   store: AuthStore,
   email: string,
+  password: string,
   now = new Date(),
 ): AuthenticatedUser | null {
   const user = store.findUserByEmail(normalizeEmail(email));
 
-  if (!user) {
+  if (!user || !verifyStaffPassword(password, user.passwordHash)) {
     return null;
   }
 
@@ -36,7 +54,10 @@ export function loginWithEmail(
   store.createSession(session);
 
   return {
-    ...user,
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
     sessionId: session.id,
   };
 }

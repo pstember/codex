@@ -103,3 +103,21 @@ The hackathon demo should not rely only on canned golden queries. Keep fixtures 
 Runtime demo paths should use static raw catalog data or live Codex App Server output. Deterministic campaign/storefront fixtures moved into test support, and runtime hero media is labeled as static assets.
 
 Rationale: the hackathon demo must scale to new products or data without changing generated fixture content, while tests still need stable data.
+
+## 2026-05-23: Codex Run Events Are Append-Only
+
+Persist Codex observability runs separately from metrics traces, with append-only run events ordered by occurrence time and insertion sequence.
+
+Rationale: the UI needs a traceable run-event stream that can later feed replay or live SSE without mutating historical generation events.
+
+## 2026-05-23: Staff Auth Uses Passwords, Guests Stay Public
+
+Seed only Manager and Operator as backend staff users, store their demo passwords as Node `scrypt` hashes, and route unauthenticated back-office access to `/admin`. Guests do not have seeded accounts and use the public storefront directly.
+
+Rationale: the demo should model a clearer staff security boundary while keeping the customer storefront frictionless and preserving the lightweight local auth architecture.
+
+## 2026-05-23: Public Store Replaces Mission Control
+
+Use `/` for the real anonymous storefront and keep `/store` as a compatibility redirect. Remove Mission Control and Loom replay as product surfaces.
+
+Rationale: the demo should feel like a real commerce product that can be driven live by a human, with observability around Codex runs instead of a scripted capture checklist.

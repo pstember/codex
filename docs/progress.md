@@ -58,30 +58,39 @@ Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot w
 - Wired storefront generation to use the image harness for campaign hero assets and backfill legacy persisted storefront versions without visual metadata.
 - Rendered hero visual previews and prompts in Operator review, static hero visuals on Guest, and a richer Time Machine strategic readout for hero copy and creative asset changes.
 - Extended the Playwright smoke to assert the new visual prompt/readout during the Father’s Day to Secret Santa workflow.
-- Added explicit Guest version selection on `/store` using `?version=baseline` or a published version id, including inactive version previews without changing the active publication.
+- Added explicit Guest version selection on the public storefront using `?version=baseline` or a published version id, including inactive version previews without changing publication history.
 - Extended the Playwright smoke so Guest selects the inactive Father’s Day version after Secret Santa is active.
-- Added a tested Mission Control replay model that derives demo milestones, current action, completion count, and active storefront from persisted workflow artifacts.
-- Surfaced Mission Control Demo Mode on the home screen with replay checkpoints linking into Manager, Operator, and Guest views.
-- Added URL-driven Mission Control replay controls for selected checkpoints, previous/next clamping, selected-step status/action display, and preserved role-view links.
-- Added a tested Mission Control capture-frame model and reshaped the home screen into a split-screen Loom command center with a replay control lane, live-ish selected-step preview lane, active storefront state, and direct Manager/Operator/Guest links.
-- Added a tested Loom capture checklist model and home-screen checklist with stable capture links for the opening frame, Manager trace, Operator workspace, Time Machine, and Guest close.
-- Hardened the Playwright smoke to assert Mission Control capture checklist links after the full demo path and verify the Guest close link navigates to the active Secret Santa storefront.
-- Updated `docs/demo-script.md` with exact Mission Control replay URLs and capture handoff steps for a human Loom run.
+- Removed Mission Control replay as the main demo surface so the app opens on the real public storefront.
 - Added a real, configuration-gated Codex App Server harness path using `CODEX_HARNESS_MODE=app-server`, `codex app-server` stdio, ephemeral read-only threads, JSON-schema-constrained turns, and server-side validation before app persistence/rendering.
 - Added a live custom Manager question path for App Server mode while preserving golden queries over static catalog data for fast rehearsal. Custom questions are translated by Codex into the fixed GraphQL schema, validated, executed against the seeded Atlas catalog, rendered from real query results, and saved as normal Metrics traces.
 - Moved deterministic Codex campaign/storefront fixtures into test support, changed the default runtime harness to static catalog derivation, and relabeled runtime hero media as static assets under `public/static-assets/`.
+- Added anonymous storefront cart domain operations with persona-aware promotion pricing for demo-only carts.
+- Added the Codex observability run-event foundation with persisted `codex_runs`, append-only `codex_run_events`, terminal summaries, and a basic SSE route for persisted run events.
+- Added staff password auth for Manager and Operator, removed the seeded Guest account, added `/admin`, routed unauthenticated back-office access there, and kept Guests on the public storefront.
+- Added deterministic London commerce source data for customers, addresses, orders, stock positions, returns, email events, and promotions.
+- Expanded commerce GraphQL to validate and execute `customers`, `orders`, and `promotions` queries in addition to products.
+- Moved the public storefront to `/`, kept `/store` as a compatibility redirect, and added a demo persona cart UI with targeted promotion totals.
+- Added a Manager Codex live window backed by persisted run events for prompt/schema/generation/validation/query/save stages.
 
 ## Test Status
 
 - `npm run typecheck`: passing.
 - `npm run lint`: passing.
-- `npm test`: passing, 12 files and 63 tests.
+- `npm test`: passing, 15 files and 64 tests.
 - `npm run coverage`: passing at 91.8% statements, 91.72% lines, 97.25% functions, and 85.71% branches.
 - `npm run build`: passing with `next build --webpack`.
-- Playwright e2e smoke: passing after sandbox escalation for Manager login, saved-run creation, Operator login, handoff selection, static-data Father’s Day proposal generation, proposal approval, storefront config rendering, visual prompt review, publishing, Time Machine active status and strategic comparison, Secret Santa revamp, seasonal storefront config rendering, Secret Santa publishing, Guest active storefront rendering, explicit inactive-version Guest preview, Mission Control capture checklist links, and Guest close navigation. The sandboxed attempt failed because the Next test server could not bind to `0.0.0.0:3000`.
-- Home page visual QA: passed for `?step=operator-proposal` at desktop and mobile widths with the split-screen replay lane, capture frame, clamped previous/next buttons, and preserved role-view links visible; a follow-up `?step=guest-preview` screenshot confirmed the Loom capture checklist fits below the replay controls. The in-app Browser surface was unavailable, so screenshot verification used Playwright against the running local app.
+- Playwright e2e smoke: passing after sandbox escalation for `/admin` Manager login, saved-run creation with Codex live-window events, Operator login, handoff selection, Father’s Day proposal/config/publish, Secret Santa revamp/config/publish, root storefront rendering, inactive version preview, and anonymous cart interaction. The sandboxed attempt failed because the Next test server could not bind to `0.0.0.0:3000`; Playwright now uses a throwaway SQLite file under `/private/tmp` for isolated browser runs.
 - Live Codex App Server smoke: passed after sandbox escalation; a direct `codex app-server` stdio turn returned `{"ok":true,"source":"codex-app-server"}`. The first sandboxed attempt failed because Codex could not write its normal state under `~/.codex`.
 - Live custom query App Server smoke: passed after sandbox escalation; Codex translated “Which under £50 products have the best margin and enough inventory?” into a valid `products(filter: { maxPrice: 50 })` GraphQL query with product fields.
+- Focused anonymous cart promotions test: passing for add/update/remove operations and coffee-regulars Father’s Day promotion pricing.
+- Focused Codex run events test: passing for persisted ordering and terminal summary.
+- Scoped Biome check for Codex run files: passing.
+- Focused auth/database tests: passing for staff password login, failed login rejection, no Guest account, password hashes, sessions, and role permission boundaries.
+- Scoped Biome check for auth/admin files: passing.
+- Focused rich commerce data/GraphQL tests: passing for relationship integrity, SQLite seed counts, and customer/order/promotion GraphQL execution.
+- Integrated lint, typecheck, and unit test suite: passing after the refocus.
+- `npm run build`: passing with `next build --webpack` after the route refocus.
+- `npm run coverage`: passing at 91.39% statements, 91.48% lines, 96.49% functions, and 80% branches.
 
 ## Dependency Status
 
@@ -90,20 +99,20 @@ Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot w
 
 ## Security Status
 
-- `npm run security:audit`: completed with 2 moderate advisories from Next's nested PostCSS dependency.
+- `npm run security:audit`: completed with 2 moderate advisories from Next's nested PostCSS dependency and exits non-zero because no safe current fix is available.
 - The suggested force fix would downgrade Next to 9.3.3, so remediation is deferred and documented in `docs/security.md`.
 
 ## Known Gaps
 
 - Codex App Server is available locally through `codex app-server`, and the app includes a configuration-gated `stdio://` adapter for real Manager/Operator generation with validated JSON output.
-- UI is functional for auth/navigation and the first Manager Metrics Copilot slice, but not the final mission-control experience.
-- Login failure currently redirects back home without a visible inline error.
+- UI is functional for public storefront/cart, staff auth/navigation, Manager Metrics Copilot, Codex run observability, and Operator publishing.
+- Login failure redirects to `/admin?error=invalid` and renders an inline staff auth error.
 - Phase 1 auth is demo-grade and intentionally not a production auth provider.
 - Metrics Copilot traces persist for the approved Manager metric questions, with trace detail drilldown and saved-run comparison now available.
-- Storefront now renders the active published version with baseline fallback, static hero visuals, and explicit baseline/published-version selection; live image generation remains future work.
+- `/` now renders the active published version with baseline fallback, static hero visuals, explicit baseline/published-version selection, anonymous cart behavior, and persona-targeted promotion pricing; `/store` redirects to `/`.
 - Operator campaign proposals can be generated and reviewed, valid proposals can be revamped into Secret Santa, valid proposals can generate validated storefront configs, and valid configs can be published; rollback groundwork exists through published version history and Operator rollback actions.
-- Mission Control Demo Mode now has a replay checklist, URL-driven replay controls, split-screen command-center polish, stable Loom capture checklist links on the home screen, a real gated Codex App Server generation path, and live custom Manager questions for non-canned demos.
+- Mission Control/Loom replay has been removed from the product surface in favor of human-driven demo flow and Codex observability inside the Manager workspace.
 
 ## Next Recommended Task
 
-Human Loom capture testing.
+Human testing of the live public-store to `/admin` to Manager/Operator publish path.

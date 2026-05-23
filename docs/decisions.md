@@ -28,6 +28,18 @@ Keep the prebuilt Manager golden queries for a quick, reliable demo path, but al
 
 Runtime demo paths should use static raw catalog data or live Codex App Server output. Deterministic fixture harnesses stay in test support, and static visual assets live under `public/static-assets/` instead of being labeled as fixture output.
 
+## 2026-05-23: Public Store And Staff Admin
+
+Use `/` as the real anonymous storefront with fake cart behavior and persona-targeted promotions. Keep `/store` as a compatibility redirect. Use `/admin` as the staff login entry for Manager and Operator.
+
+## 2026-05-23: Rich Commerce GraphQL Data
+
+Seed deterministic fictional London commerce data for customers, addresses, orders, inventory, returns, email events, and promotions. Extend the fixed GraphQL schema beyond products so live Codex questions can target customer/order/promotion context while still validating server-side.
+
+## 2026-05-23: Codex Run Observability
+
+Persist Codex run events in SQLite and show them in the Manager workspace. Treat the event stream as the live/demo observability surface instead of Mission Control replay.
+
 ## 2026-05-21: Constrained Generation
 
 Codex may generate GraphQL, campaign proposals, copy, image prompts, and storefront configs, but generated output must validate against schemas and approved component slots. Do not execute arbitrary generated code.
@@ -38,7 +50,7 @@ Use SQLite for local persistence because it is portable, easy to seed, and suita
 
 ## 2026-05-22: Lightweight Demo Auth
 
-Use app-native demo login with three seeded accounts: `manager@demo.com`, `operator@demo.com`, and `guest@demo.com`. Persist sessions in SQLite and protect Manager/Operator routes and server actions with role permissions. External auth providers remain deferred to keep the hackathon demo reliable.
+Use app-native demo login for backend staff accounts only: `manager@demo.com` and `operator@demo.com` authenticate with demo passwords stored as Node `scrypt` hashes in SQLite. Guests use the public storefront without accounts. Persist sessions in SQLite and protect Manager/Operator routes and server actions with role permissions. External auth providers remain deferred to keep the hackathon demo reliable.
 
 ## 2026-05-22: Webpack Next Server For SQLite
 

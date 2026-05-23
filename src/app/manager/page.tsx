@@ -7,6 +7,7 @@ import {
   compareMetricsRuns,
   isApprovedMetricsQuestion,
 } from "@/domain/metricsCopilot";
+import { commerceData } from "@/fixtures/commerce";
 import { products } from "@/fixtures/products";
 import { isCodexAppServerMode, staticCommerceHarness } from "@/harness/codexHarness";
 import { getAppDatabase } from "@/persistence/appDatabase";
@@ -27,6 +28,7 @@ export default async function ManagerPage({
     question: selectedQuestion,
     harness: staticCommerceHarness,
     products,
+    commerceData,
   });
   const database = getAppDatabase();
   const savedTraces = database.listRecentMetricsTraces();
@@ -37,8 +39,12 @@ export default async function ManagerPage({
         question: selectedTrace.question,
         harness: staticCommerceHarness,
         products,
+        commerceData,
       })
     : null;
+  const selectedTraceCodexEvents = selectedTrace
+    ? database.listCodexRunEvents(selectedTrace.id)
+    : [];
   const customQuestionsEnabled = isCodexAppServerMode();
   const selectedTraceGraphql =
     selectedTrace?.generatedGraphql || selectedTraceAnswer?.trace.generatedQuery.query || "";
@@ -202,6 +208,35 @@ export default async function ManagerPage({
         </div>
 
         <aside className="space-y-5">
+          <div className="rounded-lg border border-neutral-300 bg-neutral-950 p-6 text-white">
+            <p className="text-sm font-semibold uppercase tracking-wide text-emerald-300">
+              Codex live window
+            </p>
+            {selectedTraceCodexEvents.length > 0 ? (
+              <ol className="mt-4 space-y-3 text-sm">
+                {selectedTraceCodexEvents.map((event) => (
+                  <li
+                    className="rounded-md border border-white/10 bg-white/5 p-3"
+                    key={`${event.stage}-${event.occurredAt.toISOString()}`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-semibold text-neutral-50">{event.stage}</p>
+                      <time className="text-xs text-neutral-400">
+                        {event.occurredAt.toLocaleTimeString("en-GB")}
+                      </time>
+                    </div>
+                    <p className="mt-1 leading-6 text-neutral-300">{event.message}</p>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="mt-4 text-sm leading-6 text-neutral-300">
+                Run an analysis to show Codex prompt, schema, validation, query execution, and save
+                events.
+              </p>
+            )}
+          </div>
+
           <div className="rounded-lg border border-neutral-300 bg-neutral-950 p-6 text-white">
             <p className="text-sm font-semibold uppercase tracking-wide text-emerald-300">
               Codex trace

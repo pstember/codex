@@ -30,6 +30,8 @@ describe("commerce SQLite database", () => {
 
       expect(database.countUsers()).toBe(demoUsers.length);
       expect(database.findUserByEmail("operator@demo.com")?.role).toBe("operator");
+      expect(database.findUserByEmail("operator@demo.com")?.passwordHash).toMatch(/^scrypt:/);
+      expect(database.findUserByEmail("guest@demo.com")).toBeNull();
       expect(
         database.findUserBySession("session-1", new Date("2026-05-22T12:00:00.000Z")),
       ).toMatchObject({

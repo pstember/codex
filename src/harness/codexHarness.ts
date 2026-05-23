@@ -265,7 +265,7 @@ export function createAppServerCodexHarness(
           `Business question: ${question}`,
           "Return JSON only. The query must use this schema:",
           commerceGraphqlSchemaPrompt,
-          "Use only the products query. Do not invent fields.",
+          "Use only the approved Query fields and schema fields. Do not invent fields.",
         ].join("\n"),
         schemaName: "GeneratedQuery",
         jsonSchema: generatedQueryJsonSchema,
@@ -403,13 +403,78 @@ const commerceGraphqlSchemaPrompt = `type Product {
   returnRate: Float!
 }
 
+type Customer {
+  id: ID!
+  email: String!
+  name: String!
+  segment: String!
+  borough: String!
+  defaultAddressId: ID!
+  lifetimeValue: Float!
+  ordersCount: Int!
+}
+
+type OrderItem {
+  id: ID!
+  productId: ID!
+  quantity: Int!
+  unitPrice: Float!
+  lineTotal: Float!
+}
+
+type Order {
+  id: ID!
+  customerId: ID!
+  shippingAddressId: ID!
+  channel: String!
+  status: String!
+  currency: String!
+  orderedAt: String!
+  subtotal: Float!
+  discountTotal: Float!
+  shippingTotal: Float!
+  grandTotal: Float!
+  items: [OrderItem!]!
+}
+
+type Promotion {
+  id: ID!
+  title: String!
+  segmentIds: [String!]!
+  productIds: [ID!]!
+  discountPercent: Float!
+  startsAt: String!
+  endsAt: String!
+  active: Boolean!
+}
+
 input ProductFilter {
   tags: [String!]
   maxPrice: Float
 }
 
+input CustomerFilter {
+  segment: String
+  borough: String
+}
+
+input OrderFilter {
+  channel: String
+  minTotal: Float
+  customerId: ID
+}
+
+input PromotionFilter {
+  segment: String
+  productId: ID
+  active: Boolean
+}
+
 type Query {
   products(filter: ProductFilter): [Product!]!
+  customers(filter: CustomerFilter): [Customer!]!
+  orders(filter: OrderFilter): [Order!]!
+  promotions(filter: PromotionFilter): [Promotion!]!
 }`;
 
 const generatedQueryJsonSchema = {

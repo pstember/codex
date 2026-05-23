@@ -4,7 +4,7 @@
 
 Commerce Copilot Studio is an eCommerce OS demo for a fictional shop called Atlas & Co. It shows Codex driving the loop from store insight to storefront action: a Store Manager asks metric questions, a Store Operator turns insights into campaigns, and a Guest sees the published storefront.
 
-The hackathon story must satisfy the project rubric: a polished working app, a creative visual wow factor, maintainable open-source-quality code, and a Loom demo that explains the technical idea clearly.
+The hackathon story must satisfy the project rubric: a polished working app, a creative visual wow factor, maintainable open-source-quality code, and a live demo that explains the technical idea clearly.
 
 ## Shop
 
@@ -17,7 +17,7 @@ The hackathon story must satisfy the project rubric: a polished working app, a c
 
 - Store Manager: deep metrics, product insights, saved questions, Codex traces.
 - Store Operator: product placement, campaign approval, visual approval, publish and rollback.
-- Guest: public storefront preview and version viewing.
+- Guest: anonymous public storefront browsing, fake cart interaction, and persona-targeted promotions.
 
 ## Golden Queries
 
@@ -34,13 +34,14 @@ The hackathon story must satisfy the project rubric: a polished working app, a c
 
 ## Product Scope
 
-- Back-office mission control for Manager and Operator workflows.
-- Fixed GraphQL commerce analytics schema over seeded Atlas & Co. data, with golden queries for the rehearsed path and live Manager questions translated by Codex App Server into validated GraphQL for the real demo path.
+- Public storefront at `/` with anonymous cart behavior and demo persona promotion targeting.
+- Staff back office at `/admin` for Manager and Operator workflows.
+- Fixed GraphQL commerce analytics schema over seeded Atlas & Co. product, customer, order, inventory, return, marketing, and promotion data, with golden queries for the rehearsed path and live Manager questions translated by Codex App Server into validated GraphQL for the real demo path.
+- Codex observability window that persists run events and exposes what happened during query generation, validation, execution, and trace saving.
 - Codex harness for query generation, insight summaries, campaign proposals, storefront configs, copy rewrites, and image prompts.
 - Image harness for deterministic static visuals now and live generated assets later.
 - Composable storefront renderer using approved sections and style tokens.
-- Storefront Time Machine for baseline, Father’s Day, and Secret Santa versions.
-- Loom Demo Mode with split-screen command center, live storefront preview, run trace, and replayable workflow.
+- Storefront Time Machine for baseline, Father’s Day, and Secret Santa versions inside the Operator workspace.
 
 ## Phases
 
@@ -50,13 +51,13 @@ The hackathon story must satisfy the project rubric: a polished working app, a c
 4. Father’s Day campaign proposal and storefront config validation.
 5. Storefront publishing, rollback, Guest view, and Time Machine.
 6. Secret Santa revamp with copy rewrite, product reselection, visual prompts/assets, and seasonal layout.
-7. Mission Control Demo Mode, replay run, Loom polish, visual QA, and documentation hardening.
+7. Real-experience polish: storefront cart, staff admin, Codex observability, richer data, visual QA, and documentation hardening.
 
 ## Build Rules
 
 - Use Tailwind CSS v4 for styling.
 - Use latest stable dependencies unless an incompatibility is recorded in `docs/decisions.md`.
-- Use static raw catalog data for deterministic quick-demo and Loom replay paths; keep fixtures inside tests.
+- Use deterministic seeded commerce data for rehearsals and human demo retries; keep generated fixture harnesses inside tests.
 - Keep golden queries for fast rehearsal, but do not let the demo depend only on mocks: live Codex App Server mode must support custom Manager questions that generate, validate, and execute real GraphQL against seeded commerce data.
 - Validate all generated artifacts server-side.
 - Never execute arbitrary code from generated output.

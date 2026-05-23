@@ -10,14 +10,17 @@ export default function ManualPage() {
         <h1 className="mt-4 text-5xl font-semibold">Demo manual</h1>
         <div className="mt-8 grid gap-4 md:grid-cols-3">
           {[
-            ["Store Manager", "Use manager@demo.com to access deep metrics and Codex traces."],
             [
-              "Store Operator",
-              "Use operator@demo.com to approve campaigns and publish storefronts.",
+              "Store Manager",
+              "Use manager@demo.com with manager-demo-pass on /admin to access deep metrics and Codex traces.",
             ],
             [
-              "Guest",
-              "Use guest@demo.com or the public store route to view the customer experience.",
+              "Store Operator",
+              "Use operator@demo.com with operator-demo-pass on /admin to approve campaigns and publish storefronts.",
+            ],
+            [
+              "Anonymous shopper",
+              "Open / to browse the store, switch demo personas, add products to cart, and see targeted promotions.",
             ],
           ].map(([title, body]) => (
             <article className="rounded-lg border border-neutral-300 bg-white p-6" key={title}>

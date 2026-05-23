@@ -6,6 +6,7 @@ export const userSchema = z.object({
   email: z.email(),
   name: z.string().min(1),
   role: z.enum(roles),
+  passwordHash: z.string().min(1),
 });
 
 export type User = z.infer<typeof userSchema>;
@@ -18,6 +19,6 @@ export const sessionSchema = z.object({
 
 export type Session = z.infer<typeof sessionSchema>;
 
-export interface AuthenticatedUser extends User {
+export interface AuthenticatedUser extends Omit<User, "passwordHash"> {
   sessionId: string;
 }

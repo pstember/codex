@@ -1,5 +1,7 @@
 import { createRequire } from "node:module";
 import type { AuthStore } from "@/domain/auth";
+import type { CodexRun, CodexRunEvent } from "@/domain/codexRun";
+import type { CommerceData } from "@/domain/commerce";
 import type { MetricsTrace } from "@/domain/metricsTrace";
 import type { CampaignProposal } from "@/domain/operatorCampaign";
 import type { Product } from "@/domain/product";
@@ -15,8 +17,12 @@ const { DatabaseSync } = createRequire(import.meta.url)(
 export interface CommerceDatabase extends AuthStore {
   close(): void;
   seedProducts(products: Product[]): void;
+  seedCommerceData(data: CommerceData): void;
   seedUsers(users: User[]): void;
   countProducts(): number;
+  countCustomers(): number;
+  countOrders(): number;
+  countPromotions(): number;
   countUsers(): number;
   saveMetricsTrace(trace: MetricsTrace): void;
   listRecentMetricsTraces(limit?: number): MetricsTrace[];
@@ -31,6 +37,9 @@ export interface CommerceDatabase extends AuthStore {
   listPublishedStorefrontVersions(limit?: number): PublishedStorefrontVersion[];
   findPublishedStorefrontVersionById(id: string): PublishedStorefrontVersion | null;
   findActiveStorefrontVersion(): PublishedStorefrontVersion | null;
+  saveCodexRun(run: CodexRun): void;
+  saveCodexRunEvent(event: CodexRunEvent): void;
+  listCodexRunEvents(runId: string): CodexRunEvent[];
 }
 
 export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
@@ -53,13 +62,56 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
       id TEXT PRIMARY KEY,
       email TEXT NOT NULL UNIQUE,
       name TEXT NOT NULL,
-      role TEXT NOT NULL
+      role TEXT NOT NULL,
+      password_hash TEXT NOT NULL DEFAULT ''
     );
 
     CREATE TABLE IF NOT EXISTS sessions (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL REFERENCES users(id),
       expires_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS commerce_customers (
+      id TEXT PRIMARY KEY,
+      data_json TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS commerce_addresses (
+      id TEXT PRIMARY KEY,
+      data_json TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS commerce_orders (
+      id TEXT PRIMARY KEY,
+      data_json TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS commerce_inventory_locations (
+      id TEXT PRIMARY KEY,
+      data_json TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS commerce_stock_positions (
+      product_id TEXT NOT NULL,
+      location_id TEXT NOT NULL,
+      data_json TEXT NOT NULL,
+      PRIMARY KEY (product_id, location_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS commerce_returns (
+      id TEXT PRIMARY KEY,
+      data_json TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS commerce_email_events (
+      id TEXT PRIMARY KEY,
+      data_json TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS commerce_promotions (
+      id TEXT PRIMARY KEY,
+      data_json TEXT NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS metrics_traces (
@@ -105,6 +157,25 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
       published_by_user_id TEXT NOT NULL,
       published_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS codex_runs (
+      id TEXT PRIMARY KEY,
+      question TEXT NOT NULL,
+      created_by_user_id TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS codex_run_events (
+      sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+      run_id TEXT NOT NULL REFERENCES codex_runs(id),
+      stage TEXT NOT NULL,
+      message TEXT NOT NULL,
+      occurred_at TEXT NOT NULL,
+      payload_json TEXT NOT NULL DEFAULT '{}'
+    );
+
+    CREATE INDEX IF NOT EXISTS codex_run_events_order_idx
+      ON codex_run_events (run_id, occurred_at, sequence);
   `);
 
   const metricTraceColumns = database.prepare("PRAGMA table_info(metrics_traces);").all() as Array<{
@@ -126,6 +197,15 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
 
   if (!metricTraceColumnNames.has("rationale")) {
     database.exec("ALTER TABLE metrics_traces ADD COLUMN rationale TEXT NOT NULL DEFAULT '';");
+  }
+
+  const userColumns = database.prepare("PRAGMA table_info(users);").all() as Array<{
+    name: string;
+  }>;
+  const userColumnNames = new Set(userColumns.map((column) => column.name));
+
+  if (!userColumnNames.has("password_hash")) {
+    database.exec("ALTER TABLE users ADD COLUMN password_hash TEXT NOT NULL DEFAULT '';");
   }
 
   const insertProduct = database.prepare(`
@@ -153,12 +233,13 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
   `);
 
   const insertUser = database.prepare(`
-    INSERT INTO users (id, email, name, role)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO users (id, email, name, role, password_hash)
+    VALUES (?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       email = excluded.email,
       name = excluded.name,
-      role = excluded.role;
+      role = excluded.role,
+      password_hash = excluded.password_hash;
   `);
 
   const insertSession = database.prepare(`
@@ -166,8 +247,56 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
     VALUES (?, ?, ?);
   `);
 
+  const upsertCommerceCustomer = database.prepare(`
+    INSERT INTO commerce_customers (id, data_json)
+    VALUES (?, ?)
+    ON CONFLICT(id) DO UPDATE SET data_json = excluded.data_json;
+  `);
+
+  const upsertCommerceAddress = database.prepare(`
+    INSERT INTO commerce_addresses (id, data_json)
+    VALUES (?, ?)
+    ON CONFLICT(id) DO UPDATE SET data_json = excluded.data_json;
+  `);
+
+  const upsertCommerceOrder = database.prepare(`
+    INSERT INTO commerce_orders (id, data_json)
+    VALUES (?, ?)
+    ON CONFLICT(id) DO UPDATE SET data_json = excluded.data_json;
+  `);
+
+  const upsertCommerceInventoryLocation = database.prepare(`
+    INSERT INTO commerce_inventory_locations (id, data_json)
+    VALUES (?, ?)
+    ON CONFLICT(id) DO UPDATE SET data_json = excluded.data_json;
+  `);
+
+  const upsertCommerceStockPosition = database.prepare(`
+    INSERT INTO commerce_stock_positions (product_id, location_id, data_json)
+    VALUES (?, ?, ?)
+    ON CONFLICT(product_id, location_id) DO UPDATE SET data_json = excluded.data_json;
+  `);
+
+  const upsertCommerceReturn = database.prepare(`
+    INSERT INTO commerce_returns (id, data_json)
+    VALUES (?, ?)
+    ON CONFLICT(id) DO UPDATE SET data_json = excluded.data_json;
+  `);
+
+  const upsertCommerceEmailEvent = database.prepare(`
+    INSERT INTO commerce_email_events (id, data_json)
+    VALUES (?, ?)
+    ON CONFLICT(id) DO UPDATE SET data_json = excluded.data_json;
+  `);
+
+  const upsertCommercePromotion = database.prepare(`
+    INSERT INTO commerce_promotions (id, data_json)
+    VALUES (?, ?)
+    ON CONFLICT(id) DO UPDATE SET data_json = excluded.data_json;
+  `);
+
   const findUserByEmailStatement = database.prepare(`
-    SELECT id, email, name, role FROM users WHERE email = ?;
+    SELECT id, email, name, role, password_hash AS passwordHash FROM users WHERE email = ?;
   `);
 
   const findUserBySessionStatement = database.prepare(`
@@ -213,6 +342,43 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
       recommended_product_ids_json = excluded.recommended_product_ids_json,
       created_by_user_id = excluded.created_by_user_id,
       created_at = excluded.created_at;
+  `);
+
+  const insertCodexRun = database.prepare(`
+    INSERT INTO codex_runs (
+      id,
+      question,
+      created_by_user_id,
+      created_at
+    )
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      question = excluded.question,
+      created_by_user_id = excluded.created_by_user_id,
+      created_at = excluded.created_at;
+  `);
+
+  const insertCodexRunEvent = database.prepare(`
+    INSERT INTO codex_run_events (
+      run_id,
+      stage,
+      message,
+      occurred_at,
+      payload_json
+    )
+    VALUES (?, ?, ?, ?, ?);
+  `);
+
+  const listCodexRunEvents = database.prepare(`
+    SELECT
+      run_id AS runId,
+      stage,
+      message,
+      occurred_at AS occurredAt,
+      payload_json AS payloadJson
+    FROM codex_run_events
+    WHERE run_id = ?
+    ORDER BY occurred_at ASC, sequence ASC;
   `);
 
   const listMetricsTraces = database.prepare(`
@@ -440,6 +606,22 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
     };
   }
 
+  function parseCodexRunEventRow(row: {
+    runId: string;
+    stage: string;
+    message: string;
+    occurredAt: string;
+    payloadJson: string;
+  }): CodexRunEvent {
+    return {
+      runId: row.runId,
+      stage: row.stage,
+      message: row.message,
+      occurredAt: new Date(row.occurredAt),
+      payload: JSON.parse(row.payloadJson) as Record<string, unknown>,
+    };
+  }
+
   function parseCampaignProposalRow(row: {
     id: string;
     sourceTraceId: string;
@@ -542,6 +724,14 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
     };
   }
 
+  function countRows(tableName: string): number {
+    const row = database.prepare(`SELECT COUNT(*) AS count FROM ${tableName}`).get() as {
+      count: number;
+    };
+
+    return row.count;
+  }
+
   return {
     close() {
       database.close();
@@ -570,12 +760,61 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
         throw error;
       }
     },
+    seedCommerceData(data) {
+      database.exec("BEGIN");
+
+      try {
+        for (const customer of data.customers) {
+          upsertCommerceCustomer.run(customer.id, JSON.stringify(customer));
+        }
+
+        for (const address of data.addresses) {
+          upsertCommerceAddress.run(address.id, JSON.stringify(address));
+        }
+
+        for (const order of data.orders) {
+          upsertCommerceOrder.run(order.id, JSON.stringify(order));
+        }
+
+        for (const location of data.inventoryLocations) {
+          upsertCommerceInventoryLocation.run(location.id, JSON.stringify(location));
+        }
+
+        for (const stockPosition of data.stockPositions) {
+          upsertCommerceStockPosition.run(
+            stockPosition.productId,
+            stockPosition.locationId,
+            JSON.stringify(stockPosition),
+          );
+        }
+
+        for (const returnRequest of data.returns) {
+          upsertCommerceReturn.run(returnRequest.id, JSON.stringify(returnRequest));
+        }
+
+        for (const emailEvent of data.emailEvents) {
+          upsertCommerceEmailEvent.run(emailEvent.id, JSON.stringify(emailEvent));
+        }
+
+        for (const promotion of data.promotions) {
+          upsertCommercePromotion.run(promotion.id, JSON.stringify(promotion));
+        }
+
+        database.exec("COMMIT");
+      } catch (error) {
+        database.exec("ROLLBACK");
+        throw error;
+      }
+    },
     seedUsers(users) {
       database.exec("BEGIN");
 
       try {
+        database.prepare("DELETE FROM sessions WHERE user_id = ?").run("demo-guest");
+        database.prepare("DELETE FROM users WHERE id = ?").run("demo-guest");
+
         for (const user of users) {
-          insertUser.run(user.id, user.email, user.name, user.role);
+          insertUser.run(user.id, user.email, user.name, user.role, user.passwordHash);
         }
 
         database.exec("COMMIT");
@@ -590,6 +829,15 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
       };
 
       return row.count;
+    },
+    countCustomers() {
+      return countRows("commerce_customers");
+    },
+    countOrders() {
+      return countRows("commerce_orders");
+    },
+    countPromotions() {
+      return countRows("commerce_promotions");
     },
     countUsers() {
       const row = database.prepare("SELECT COUNT(*) AS count FROM users").get() as {
@@ -762,6 +1010,25 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
         | undefined;
 
       return row ? parsePublishedStorefrontVersionRow(row) : null;
+    },
+    saveCodexRun(run) {
+      insertCodexRun.run(run.id, run.question, run.createdByUserId, run.createdAt.toISOString());
+    },
+    saveCodexRunEvent(event) {
+      insertCodexRunEvent.run(
+        event.runId,
+        event.stage,
+        event.message,
+        event.occurredAt.toISOString(),
+        JSON.stringify(event.payload),
+      );
+    },
+    listCodexRunEvents(runId) {
+      const rows = listCodexRunEvents.all(runId) as Array<
+        Parameters<typeof parseCodexRunEventRow>[0]
+      >;
+
+      return rows.map(parseCodexRunEventRow);
     },
   };
 }
