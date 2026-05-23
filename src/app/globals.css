@@ -2,12 +2,12 @@
 
 :root {
   color-scheme: light;
-  --background: #f7f4ef;
-  --foreground: #171717;
+  --background: #f3f0e8;
+  --foreground: #17241f;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Aptos", "Avenir Next", "Segoe UI", sans-serif;
 }

@@ -71,6 +71,8 @@ Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot w
 - Expanded commerce GraphQL to validate and execute `customers`, `orders`, and `promotions` queries in addition to products.
 - Moved the public storefront to `/`, kept `/store` as a compatibility redirect, and added a demo persona cart UI with targeted promotion totals.
 - Added a Manager Codex live window backed by persisted run events for prompt/schema/generation/validation/query/save stages.
+- Redesigned the Manager workspace as a credible analytics command center with portfolio KPIs, all-SKU metric exploration, opportunity scoring, risk/hold signals, saved-run comparison, and a sticky Codex observability rail.
+- Refreshed the shared staff `AppChrome` shell so Manager and Operator back-office pages have a denser operational navigation frame.
 
 ## Test Status
 
@@ -91,6 +93,7 @@ Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot w
 - Integrated lint, typecheck, and unit test suite: passing after the refocus.
 - `npm run build`: passing with `next build --webpack` after the route refocus.
 - `npm run coverage`: passing at 91.39% statements, 91.48% lines, 96.49% functions, and 80% branches.
+- Manager redesign checks: `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build` passing. Playwright visual smoke passed against the built app on port 3002 for `/admin` Manager login and `/manager` desktop/mobile screenshots. The in-app browser blocked localhost navigation, so Playwright was used for verification instead.
 
 ## Dependency Status
 
@@ -105,7 +108,7 @@ Foundation and demo auth are complete. Current phase: Phase 1, Metrics Copilot w
 ## Known Gaps
 
 - Codex App Server is available locally through `codex app-server`, and the app includes a configuration-gated `stdio://` adapter for real Manager/Operator generation with validated JSON output.
-- UI is functional for public storefront/cart, staff auth/navigation, Manager Metrics Copilot, Codex run observability, and Operator publishing.
+- UI is functional for public storefront/cart, staff auth/navigation, Manager Metrics Copilot, Codex run observability, and Operator publishing. The Manager page now exposes portfolio-level metrics and all-SKU exploration instead of focusing only on a recommended-product table.
 - Login failure redirects to `/admin?error=invalid` and renders an inline staff auth error.
 - Phase 1 auth is demo-grade and intentionally not a production auth provider.
 - Metrics Copilot traces persist for the approved Manager metric questions, with trace detail drilldown and saved-run comparison now available.

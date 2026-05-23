@@ -127,3 +127,9 @@ Rationale: the demo should feel like a real commerce product that can be driven 
 Use the project-local `frontend-design` skill for frontend component, page, and app work that needs distinctive, production-grade interface direction.
 
 Rationale: frontend work should avoid generic aesthetics and preserve a clear creative point of view while staying reviewable with the repo.
+
+## 2026-05-23: Manager Analytics Command Center
+
+Treat `/manager` as a portfolio analytics workspace, not a single recommendation report. Keep Codex observability visible in a persistent rail while the main canvas exposes catalog KPIs, all-SKU metrics, opportunity/risk signals, saved-run comparison, and Operator handoff context.
+
+Rationale: the Store Manager role needs credible exploration across the whole catalog, and the demo story depends on showing both business reasoning and the validated Codex run trail at the same time.
