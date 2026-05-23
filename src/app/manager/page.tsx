@@ -8,7 +8,7 @@ import {
   isApprovedMetricsQuestion,
 } from "@/domain/metricsCopilot";
 import { products } from "@/fixtures/products";
-import { getCodexHarness } from "@/harness/codexHarness";
+import { isCodexAppServerMode, staticCommerceHarness } from "@/harness/codexHarness";
 import { getAppDatabase } from "@/persistence/appDatabase";
 
 export default async function ManagerPage({
@@ -23,10 +23,9 @@ export default async function ManagerPage({
     requestedQuestion && isApprovedMetricsQuestion(requestedQuestion)
       ? requestedQuestion
       : approvedMetricsQuestions[0];
-  const codexHarness = getCodexHarness();
   const answer = await answerMetricsQuestion({
     question: selectedQuestion,
-    harness: codexHarness,
+    harness: staticCommerceHarness,
     products,
   });
   const database = getAppDatabase();
@@ -36,10 +35,11 @@ export default async function ManagerPage({
   const selectedTraceAnswer = selectedTrace
     ? await answerMetricsQuestion({
         question: selectedTrace.question,
-        harness: codexHarness,
+        harness: staticCommerceHarness,
         products,
       })
     : null;
+  const customQuestionsEnabled = isCodexAppServerMode();
   const selectedTraceGraphql =
     selectedTrace?.generatedGraphql || selectedTraceAnswer?.trace.generatedQuery.query || "";
   const selectedTraceRationale =
@@ -86,6 +86,43 @@ export default async function ManagerPage({
             >
               Run analysis
             </button>
+          </form>
+
+          <form
+            action={runMetricsQuestionAction}
+            className="mt-4 rounded-md border border-neutral-200 bg-neutral-50 p-4"
+          >
+            <label
+              className="text-sm font-semibold uppercase tracking-wide text-neutral-600"
+              htmlFor="custom-metrics-question"
+            >
+              Ask your own question
+            </label>
+            <textarea
+              className="mt-3 min-h-24 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm disabled:bg-neutral-100 disabled:text-neutral-500"
+              disabled={!customQuestionsEnabled}
+              id="custom-metrics-question"
+              name="customQuestion"
+              placeholder={
+                customQuestionsEnabled
+                  ? "Example: Which under £50 products have the best margin and enough inventory?"
+                  : "Start with CODEX_HARNESS_MODE=app-server to unlock live Codex translation."
+              }
+            />
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs leading-5 text-neutral-600">
+                {customQuestionsEnabled
+                  ? "Codex translates this into GraphQL, the server validates it, then Atlas data is queried."
+                  : "Golden queries stay available from static catalog data for quick rehearsal."}
+              </p>
+              <button
+                className="rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold text-white disabled:bg-neutral-300 disabled:text-neutral-600"
+                disabled={!customQuestionsEnabled}
+                type="submit"
+              >
+                Run live Codex query
+              </button>
+            </div>
           </form>
 
           <div className="mt-6">

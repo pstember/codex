@@ -27,7 +27,7 @@ curl http://127.0.0.1:4500/readyz
 curl http://127.0.0.1:4500/healthz
 ```
 
-Both endpoints should return HTTP 200 when the WebSocket listener is ready. The App Server adapter should still be optional and fixture-backed flows must remain the default for deterministic tests and Loom replay.
+Both endpoints should return HTTP 200 when the WebSocket listener is ready. The App Server adapter should still be optional, with static raw catalog flows available for deterministic quick demos and fixtures kept to tests.
 
 ## Codex Harness Interface
 
@@ -42,9 +42,10 @@ The app should use a server-side harness with these capabilities:
 
 ## Implementations
 
-- `fixtureCodexHarness`: deterministic outputs for tests, local development, and Loom replay.
+- `staticCommerceHarness`: default runtime harness that derives queries, insights, campaign proposals, and storefront configs from the seeded Atlas catalog rather than generated fixtures.
+- `fixtureCodexHarness`: deterministic test-support harness only.
 - `cliCodexHarness`: optional local Codex CLI integration where useful.
-- `appServerCodexHarness`: optional adapter for the Codex App Server protocol. The app now supports a real `stdio://` path by spawning `codex app-server`, starting an ephemeral read-only thread, sending a JSON-schema-constrained turn, and validating the returned JSON before persistence or rendering. It is gated by `CODEX_HARNESS_MODE=app-server`; fixture mode remains the default for deterministic tests and Loom replay.
+- `appServerCodexHarness`: optional adapter for the Codex App Server protocol. The app now supports a real `stdio://` path by spawning `codex app-server`, starting an ephemeral read-only thread, sending a JSON-schema-constrained turn, and validating the returned JSON before persistence or rendering. It is gated by `CODEX_HARNESS_MODE=app-server`; static catalog mode remains the default runtime mode.
 
 To run a human demo with real Codex App Server usage:
 
@@ -52,16 +53,17 @@ To run a human demo with real Codex App Server usage:
 CODEX_HARNESS_MODE=app-server npm run dev
 ```
 
-Then use the normal Manager and Operator generation actions. If the Codex CLI is not authenticated or App Server is unavailable, switch back to fixture mode by omitting `CODEX_HARNESS_MODE`.
+Then use the normal Manager and Operator generation actions. If the Codex CLI is not authenticated or App Server is unavailable, omit `CODEX_HARNESS_MODE` to use static catalog mode.
 - Storefront config generation enriches valid proposals with image-harness hero asset metadata before validation and persistence.
+- Manager custom questions are enabled only in `CODEX_HARNESS_MODE=app-server`. They use Codex to translate natural language into the fixed GraphQL schema, validate the generated query, execute it against the seeded product catalog, and persist the run as a trace.
 
 ## Image Harness Interface
 
 The image harness should:
 
-- Return fixture-backed visual assets for deterministic demo runs.
+- Return static visual assets for deterministic demo runs.
 - Store prompts and asset metadata.
-- Current fixture assets live under `public/fixtures/` for baseline, Father’s Day, and Secret Santa hero visuals.
+- Current static assets live under `public/static-assets/` for baseline, Father’s Day, and Secret Santa hero visuals.
 - Later support live image generation or editing when the environment is ready.
 
 ## Validation Boundary

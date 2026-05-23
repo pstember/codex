@@ -22,8 +22,8 @@ export const campaignVisualAssetSchema = z.object({
   campaignId: z.string().min(1),
   prompt: z.string().min(1),
   alt: z.string().min(1),
-  source: z.enum(["fixture", "generated"]),
-  path: z.string().startsWith("/fixtures/"),
+  source: z.enum(["static", "generated"]),
+  path: z.string().startsWith("/static-assets/"),
 });
 
 export const storefrontSectionSchema = z.object({

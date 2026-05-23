@@ -6,9 +6,10 @@ import {
   type CodexAppServerJsonRunner,
   cliCodexHarness,
   createAppServerCodexHarness,
-  fixtureCodexHarness,
   getCodexHarness,
+  staticCommerceHarness,
 } from "@/harness/codexHarness";
+import { fixtureCodexHarness } from "./support/fixtureCodexHarness";
 
 describe("fixture Codex harness", () => {
   it("generates a valid Father’s Day GraphQL query fixture", async () => {
@@ -77,7 +78,7 @@ describe("fixture Codex harness", () => {
     expect(result.query).toContain("maxPrice: 50");
   });
 
-  it("routes the CLI harness through the deterministic fixture implementation for now", async () => {
+  it("routes the CLI harness through static catalog derivation for now", async () => {
     const campaign = await cliCodexHarness.generateCampaignProposal({
       insightTitle: "Father’s Day",
       season: "fathers-day",
@@ -91,6 +92,34 @@ describe("fixture Codex harness", () => {
     expect(storefrontConfigSchema.parse(storefront).style.theme).toBe("summer");
     expect(generatedQuerySchema.parse(query).operationName).toBe("FatherDayPromotionCandidates");
     expect(insightSummarySchema.parse(insight).recommendedProductIds.length).toBeGreaterThan(0);
+  });
+
+  it("derives runtime fallback outputs from static catalog data instead of generated fixtures", async () => {
+    const underFiftyQuery = await staticCommerceHarness.generateGraphQLQuery(
+      "Which under £50 products have enough inventory?",
+    );
+    const riskInsight = await staticCommerceHarness.summarizeInsight(
+      "Which products should we avoid because of risk?",
+    );
+    const mobileInsight = await staticCommerceHarness.summarizeInsight(
+      "Why did mobile conversion drop last week?",
+    );
+    const exposureInsight = await staticCommerceHarness.summarizeInsight(
+      "Which products have high inventory but are underexposed?",
+    );
+    const campaign = await staticCommerceHarness.generateCampaignProposal({
+      insightTitle: exposureInsight.title,
+      season: "secret-santa",
+    });
+    const storefront = await staticCommerceHarness.generateStorefrontConfig(campaign);
+
+    expect(staticCommerceHarness.mode).toBe("static");
+    expect(underFiftyQuery.query).toContain("maxPrice: 50");
+    expect(riskInsight.recommendedProductIds).toContain("espresso-machine");
+    expect(mobileInsight.recommendedProductIds).toContain("espresso-machine");
+    expect(exposureInsight.recommendedProductIds).toContain("desk-organizer-tray");
+    expect(campaign.productIds.every((productId) => productId !== "espresso-machine")).toBe(true);
+    expect(storefront.campaignId).toBe(campaign.id);
   });
 
   it("routes the App Server harness through a JSON prompt runner and validates outputs", async () => {
@@ -150,11 +179,11 @@ describe("fixture Codex harness", () => {
     ]);
   });
 
-  it("selects fixture mode by default and App Server mode only when explicitly configured", () => {
+  it("selects static data mode by default and App Server mode only when explicitly configured", () => {
     const originalMode = process.env.CODEX_HARNESS_MODE;
 
     delete process.env.CODEX_HARNESS_MODE;
-    expect(getCodexHarness().mode).toBe("fixture");
+    expect(getCodexHarness().mode).toBe("static");
 
     process.env.CODEX_HARNESS_MODE = "app-server";
     expect(getCodexHarness().mode).toBe("app-server");

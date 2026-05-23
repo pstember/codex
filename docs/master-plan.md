@@ -11,7 +11,7 @@ The hackathon story must satisfy the project rubric: a polished working app, a c
 - Store: Atlas & Co.
 - Positioning: curated lifestyle and gifting goods for home, travel, outdoor, grooming, coffee, tech accessories, apparel basics, and small gifts.
 - Main demo act: Father’s Day insight to campaign.
-- Second act: Secret Santa seasonal revamp with rewritten copy, new product selection, layout changes, and generated or fixture-backed visuals.
+- Second act: Secret Santa seasonal revamp with rewritten copy, new product selection, layout changes, and generated or static visuals.
 
 ## Roles
 
@@ -35,9 +35,9 @@ The hackathon story must satisfy the project rubric: a polished working app, a c
 ## Product Scope
 
 - Back-office mission control for Manager and Operator workflows.
-- Fixed GraphQL commerce analytics schema over seeded Atlas & Co. data.
+- Fixed GraphQL commerce analytics schema over seeded Atlas & Co. data, with golden queries for the rehearsed path and live Manager questions translated by Codex App Server into validated GraphQL for the real demo path.
 - Codex harness for query generation, insight summaries, campaign proposals, storefront configs, copy rewrites, and image prompts.
-- Image harness for deterministic fixture visuals now and live generated assets later.
+- Image harness for deterministic static visuals now and live generated assets later.
 - Composable storefront renderer using approved sections and style tokens.
 - Storefront Time Machine for baseline, Father’s Day, and Secret Santa versions.
 - Loom Demo Mode with split-screen command center, live storefront preview, run trace, and replayable workflow.
@@ -56,7 +56,8 @@ The hackathon story must satisfy the project rubric: a polished working app, a c
 
 - Use Tailwind CSS v4 for styling.
 - Use latest stable dependencies unless an incompatibility is recorded in `docs/decisions.md`.
-- Use fixture mode for deterministic tests and Loom replay.
+- Use static raw catalog data for deterministic quick-demo and Loom replay paths; keep fixtures inside tests.
+- Keep golden queries for fast rehearsal, but do not let the demo depend only on mocks: live Codex App Server mode must support custom Manager questions that generate, validate, and execute real GraphQL against seeded commerce data.
 - Validate all generated artifacts server-side.
 - Never execute arbitrary code from generated output.
 - Every phase ends with tests, coverage status, dependency freshness status, audit status, and updated progress notes.

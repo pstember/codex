@@ -113,13 +113,13 @@ describe("storefront publishing", () => {
       visualAssetChange: {
         beforePrompt: "Evergreen Atlas & Co. product curation.",
         afterPrompt: "Playful office Secret Santa gifting.",
-        beforePath: "/fixtures/baseline-hero.svg",
-        afterPath: "/fixtures/secret-santa-hero.svg",
+        beforePath: "/static-assets/baseline-hero.svg",
+        afterPath: "/static-assets/secret-santa-hero.svg",
       },
       strategicSummary: [
         "Campaign shifted from Baseline Atlas & Co. to Secret Santa.",
         "Hero moved from everyday curation to under-£50 office gifting.",
-        "Creative asset changed from /fixtures/baseline-hero.svg to /fixtures/secret-santa-hero.svg.",
+        "Creative asset changed from /static-assets/baseline-hero.svg to /static-assets/secret-santa-hero.svg.",
       ],
       styleChanges: [
         {
@@ -171,13 +171,13 @@ describe("storefront publishing", () => {
       visualAssetChange: {
         beforePrompt: "Warm outdoor Father’s Day gifting scene.",
         afterPrompt: "Playful office Secret Santa gifting.",
-        beforePath: "/fixtures/fathers-day-hero.svg",
-        afterPath: "/fixtures/secret-santa-hero.svg",
+        beforePath: "/static-assets/fathers-day-hero.svg",
+        afterPath: "/static-assets/secret-santa-hero.svg",
       },
       strategicSummary: [
         "Campaign shifted from Father’s Day to Secret Santa.",
         "Hero moved from grill, travel, and everyday carry gifting to under-£50 office gifting.",
-        "Creative asset changed from /fixtures/fathers-day-hero.svg to /fixtures/secret-santa-hero.svg.",
+        "Creative asset changed from /static-assets/fathers-day-hero.svg to /static-assets/secret-santa-hero.svg.",
       ],
       sectionChanges: {
         added: [

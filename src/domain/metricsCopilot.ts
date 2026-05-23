@@ -1,8 +1,12 @@
-import { type QueryValidationResult, validateCommerceQuery } from "@/domain/commerceGraphql";
+import {
+  executeCommerceQuery,
+  type QueryValidationResult,
+  validateCommerceQuery,
+} from "@/domain/commerceGraphql";
 import type { GeneratedQuery, InsightSummary } from "@/domain/insight";
 import type { MetricsTrace } from "@/domain/metricsTrace";
 import type { Product } from "@/domain/product";
-import type { CodexHarness } from "@/harness/codexHarness";
+import type { CodexHarness, CodexHarnessMode } from "@/harness/codexHarness";
 
 export const fatherDayMetricsQuestion =
   "What should we promote for Father’s Day based on margin, inventory, and conversion?";
@@ -80,6 +84,15 @@ export function isApprovedMetricsQuestion(question: string): boolean {
   return approvedMetricsQuestions.includes(question as (typeof approvedMetricsQuestions)[number]);
 }
 
+export function canRunMetricsQuestion(question: string, harnessMode: CodexHarnessMode): boolean {
+  const normalizedQuestion = question.trim();
+
+  return (
+    isApprovedMetricsQuestion(normalizedQuestion) ||
+    (harnessMode === "app-server" && normalizedQuestion.length >= 8)
+  );
+}
+
 export async function answerMetricsQuestion(input: {
   question: string;
   harness: CodexHarness;
@@ -89,9 +102,17 @@ export async function answerMetricsQuestion(input: {
   const validation = validateCommerceQuery(generatedQuery);
   const insight = await input.harness.summarizeInsight(input.question);
   const productsById = new Map(input.products.map((product) => [product.id, product]));
-  const recommendedProducts = insight.recommendedProductIds
+  const queryProducts = await executeCommerceQuery({
+    generatedQuery,
+    products: input.products,
+  });
+  const insightProducts = insight.recommendedProductIds
     .map((productId) => productsById.get(productId))
     .filter((product): product is Product => Boolean(product));
+  const recommendedProducts =
+    !isApprovedMetricsQuestion(input.question) && queryProducts.length > 0
+      ? queryProducts
+      : insightProducts;
 
   return {
     question: input.question,

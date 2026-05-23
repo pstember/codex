@@ -38,7 +38,7 @@ Rationale: the Manager-to-Operator handoff is durable product behavior, and keep
 
 ## 2026-05-22 - Metrics traces in SQLite
 
-Persist Metrics Copilot traces in SQLite through the same app database used for auth and products. The first Manager action only accepts approved fixture-backed questions and refreshes the Manager page after saving.
+Persist Metrics Copilot traces in SQLite through the same app database used for auth and products. The first Manager action only accepts approved golden questions and refreshes the Manager page after saving.
 
 Rationale: saved traces are central to the demo story, but constraining input keeps generated output deterministic and server-validated while the workflow is still early.
 
@@ -50,7 +50,7 @@ Rationale: this keeps the Manager and Operator roles separated while preserving 
 
 ## 2026-05-22 - Storefront configs from approved proposals
 
-Generate fixture-backed storefront configs only from valid Operator campaign proposals, validate section schema, campaign linkage, and product references server-side, then persist the generated config to SQLite for review.
+Generate storefront configs only from valid Operator campaign proposals, validate section schema, campaign linkage, and product references server-side, then persist the generated config to SQLite for review.
 
 Rationale: the storefront step must stay traceable and constrained before publishing exists, while still proving Codex can turn an approved campaign into renderable storefront structure.
 
@@ -76,11 +76,11 @@ Rationale: Next 16 Turbopack currently fails to load `node:sqlite` in this app, 
 
 Enforce the under-£50 Secret Santa constraint at both campaign proposal validation and storefront config validation.
 
-Rationale: the seasonal revamp is fixture-backed for now, but generated output must still be server-validated before persistence or publishing.
+Rationale: the seasonal revamp must be server-validated before persistence or publishing, whether generated from static data or live Codex output.
 
 ## 2026-05-22 - Storefront visual assets are validated config data
 
-Storefront configs now carry validated hero visual asset metadata generated through the image harness, with fixture assets used for deterministic demo runs.
+Storefront configs now carry validated hero visual asset metadata generated through the image harness, with static assets used for deterministic demo runs.
 
 Rationale: Secret Santa needs a visible creative transformation, but visual output should remain traceable, server-validated data rather than ad hoc UI decoration or live generation.
 
@@ -89,6 +89,17 @@ Rationale: Secret Santa needs a visible creative transformation, but visual outp
 Let the Guest storefront resolve `?version=baseline` or a published version id while `/store` continues to default to the active published version.
 
 Rationale: Time Machine should be demoable from the customer-facing surface without changing publication history, and inactive versions should remain previewable by explicit, auditable URL state.
+
 ## 2026-05-23: Codex App Server Demo Path
 
-The app now has a real, configuration-gated Codex App Server path via `CODEX_HARNESS_MODE=app-server`. Keep fixtures as the default for deterministic tests and rehearsal, but use the App Server mode for hackathon proof that Manager/Operator generation can call live Codex and still validate output server-side.
+The app now has a real, configuration-gated Codex App Server path via `CODEX_HARNESS_MODE=app-server`. Keep fixtures for deterministic tests, but use static raw catalog data for rehearsal and App Server mode for hackathon proof that Manager/Operator generation can call live Codex and still validate output server-side.
+
+## 2026-05-23: Real Manager Questions
+
+The hackathon demo should not rely only on canned golden queries. Keep fixtures for tests, but in App Server mode allow custom Manager questions that Codex translates into the fixed commerce GraphQL schema, validates, executes against seeded Atlas data, and saves as normal traces.
+
+## 2026-05-23: Fixtures Are Test-Only
+
+Runtime demo paths should use static raw catalog data or live Codex App Server output. Deterministic campaign/storefront fixtures moved into test support, and runtime hero media is labeled as static assets.
+
+Rationale: the hackathon demo must scale to new products or data without changing generated fixture content, while tests still need stable data.

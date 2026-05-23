@@ -3,8 +3,8 @@ import type { CampaignProposal } from "@/domain/operatorCampaign";
 import { generateStorefrontConfigFromProposal } from "@/domain/storefrontGeneration";
 import { products } from "@/fixtures/products";
 import type { CodexHarness } from "@/harness/codexHarness";
-import { fixtureCodexHarness } from "@/harness/codexHarness";
 import type { ImageHarness } from "@/harness/imageHarness";
+import { fixtureCodexHarness } from "./support/fixtureCodexHarness";
 
 describe("Operator storefront config generation", () => {
   it("creates and saves a validated storefront config from an approved campaign proposal", async () => {
@@ -148,15 +148,15 @@ describe("Operator storefront config generation", () => {
       proposal: fatherDayProposal,
       harness: fixtureCodexHarness,
       imageHarness: {
-        mode: "fixture",
+        mode: "static",
         async generateCampaignHero() {
           return {
             id: "secret-santa-2026-hero-asset",
             campaignId: "secret-santa-2026",
             prompt: "Wrong seasonal visual.",
             alt: "A mismatched Secret Santa visual.",
-            source: "fixture",
-            path: "/fixtures/secret-santa-hero.svg",
+            source: "static",
+            path: "/static-assets/secret-santa-hero.svg",
           };
         },
       },
@@ -174,7 +174,7 @@ describe("Operator storefront config generation", () => {
     );
   });
 
-  it("adds a fixture-backed Secret Santa hero asset from the campaign visual direction", async () => {
+  it("adds a static Secret Santa hero asset from the campaign visual direction", async () => {
     const storefront = await generateStorefrontConfigFromProposal({
       id: "storefront-secret-santa",
       proposal: secretSantaProposal,
@@ -193,23 +193,23 @@ describe("Operator storefront config generation", () => {
       id: "secret-santa-2026-hero-asset",
       campaignId: "secret-santa-2026",
       prompt: "Playful office Secret Santa gifting.",
-      alt: "Fixture holiday desk scene with wrapped Secret Santa gifts from Atlas & Co.",
-      source: "fixture",
-      path: "/fixtures/secret-santa-hero.svg",
+      alt: "Static holiday desk scene with wrapped Secret Santa gifts from Atlas & Co.",
+      source: "static",
+      path: "/static-assets/secret-santa-hero.svg",
     });
   });
 });
 
 const secretSantaImageHarness: ImageHarness = {
-  mode: "fixture",
+  mode: "static",
   async generateCampaignHero(input) {
     return {
       id: `${input.campaignId}-hero-asset`,
       campaignId: input.campaignId,
       prompt: input.visualDirection,
-      alt: "Fixture holiday desk scene with wrapped Secret Santa gifts from Atlas & Co.",
-      source: "fixture",
-      path: "/fixtures/secret-santa-hero.svg",
+      alt: "Static holiday desk scene with wrapped Secret Santa gifts from Atlas & Co.",
+      source: "static",
+      path: "/static-assets/secret-santa-hero.svg",
     };
   },
 };

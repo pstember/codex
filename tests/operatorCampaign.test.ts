@@ -6,7 +6,7 @@ import {
 } from "@/domain/operatorCampaign";
 import { products } from "@/fixtures/products";
 import type { CodexHarness } from "@/harness/codexHarness";
-import { fixtureCodexHarness } from "@/harness/codexHarness";
+import { fixtureCodexHarness } from "./support/fixtureCodexHarness";
 
 describe("Operator campaign proposal flow", () => {
   it("creates and saves a validated Father’s Day campaign proposal from a Metrics Copilot trace", async () => {

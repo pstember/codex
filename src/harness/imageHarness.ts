@@ -5,12 +5,12 @@ export interface CampaignAsset {
   campaignId: string;
   prompt: string;
   alt: string;
-  source: "fixture" | "generated";
+  source: "static" | "generated";
   path: string;
 }
 
 export interface ImageHarness {
-  readonly mode: "fixture" | "live";
+  readonly mode: "static" | "live";
   generateCampaignHero(input: {
     campaignId: string;
     season: "fathers-day" | "secret-santa";
@@ -18,8 +18,8 @@ export interface ImageHarness {
   }): Promise<CampaignVisualAsset>;
 }
 
-export const fixtureImageHarness: ImageHarness = {
-  mode: "fixture",
+export const staticImageHarness: ImageHarness = {
+  mode: "static",
   async generateCampaignHero(input) {
     const isSecretSanta = input.season === "secret-santa";
 
@@ -30,8 +30,10 @@ export const fixtureImageHarness: ImageHarness = {
       alt: isSecretSanta
         ? "A festive desk scene with wrapped small gifts from Atlas & Co."
         : "A warm outdoor Father’s Day gifting scene with grilling and travel essentials.",
-      source: "fixture",
-      path: isSecretSanta ? "/fixtures/secret-santa-hero.svg" : "/fixtures/fathers-day-hero.svg",
+      source: "static",
+      path: isSecretSanta
+        ? "/static-assets/secret-santa-hero.svg"
+        : "/static-assets/fathers-day-hero.svg",
     };
   },
 };

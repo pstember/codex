@@ -7,7 +7,7 @@ import {
   validateStorefrontProductReferences,
 } from "@/domain/storefront";
 import type { CodexHarness } from "@/harness/codexHarness";
-import { fixtureImageHarness, type ImageHarness } from "@/harness/imageHarness";
+import { type ImageHarness, staticImageHarness } from "@/harness/imageHarness";
 
 export const generatedStorefrontConfigSchema = z.object({
   id: z.string().min(1),
@@ -42,7 +42,7 @@ export async function generateStorefrontConfigFromProposal(input: {
   const generatedConfig = await input.harness.generateStorefrontConfig(input.proposal.campaign);
   const shouldGenerateVisualAsset = input.imageHarness || !generatedConfig.visualAsset;
   const visualAsset = shouldGenerateVisualAsset
-    ? await (input.imageHarness ?? fixtureImageHarness).generateCampaignHero({
+    ? await (input.imageHarness ?? staticImageHarness).generateCampaignHero({
         campaignId: input.proposal.campaign.id,
         season: input.proposal.campaign.season,
         visualDirection: input.proposal.campaign.storefrontAngle,

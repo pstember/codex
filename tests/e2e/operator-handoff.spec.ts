@@ -19,7 +19,7 @@ test("Operator publishes Father’s Day and revamps it into Secret Santa", async
   await page.waitForURL(/\/operator\?proposal=/);
 
   await expect(
-    page.getByRole("heading", { name: "Grill, Travel, and Everyday Carry" }),
+    page.getByRole("heading", { name: "Father’s Day Picks From Live Catalog Signals" }),
   ).toBeVisible();
   await expect(page.getByRole("cell", { name: "Portable Charcoal Grill" })).toBeVisible();
   await expect(page.locator("span").filter({ hasText: "valid" })).toBeVisible();
@@ -33,7 +33,7 @@ test("Operator publishes Father’s Day and revamps it into Secret Santa", async
   ).toBeVisible();
   await expect(
     page.getByRole("heading", {
-      name: "Father’s Day gifts for grill masters, travelers, and everyday fixers.",
+      name: "Lead with practical gifts that have enough stock and commercial strength.",
     }),
   ).toBeVisible();
 
@@ -55,10 +55,10 @@ test("Operator publishes Father’s Day and revamps it into Secret Santa", async
   await page.waitForURL(/\/operator\?proposal=/);
 
   await expect(
-    page.getByRole("heading", { name: "Secret Santa Gifts That Look Effortless" }),
+    page.getByRole("heading", { name: "Secret Santa Gifts That Work Hard" }),
   ).toBeVisible();
   await expect(page.getByRole("cell", { name: "Pour-Over Coffee Set" })).toBeVisible();
-  await expect(page.getByText("under £50")).toBeVisible();
+  await expect(page.getByText("Gift buyers shopping useful under-£50 products.")).toBeVisible();
 
   await page.getByRole("button", { name: "Approve proposal" }).click();
   await page.waitForURL(/\/operator\?proposal=.*&storefront=/);
@@ -68,7 +68,7 @@ test("Operator publishes Father’s Day and revamps it into Secret Santa", async
   ).toBeVisible();
   await expect(
     page.getByRole("heading", {
-      name: "Secret Santa gifts under £50 that do not feel last-minute.",
+      name: "Lead with affordable, giftable products that are healthy in stock.",
     }),
   ).toBeVisible();
 
@@ -80,7 +80,7 @@ test("Operator publishes Father’s Day and revamps it into Secret Santa", async
     page.getByText("Baseline Atlas & Co. to Secret Santa", { exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByText("Playful office Secret Santa gifting.", { exact: true }),
+    page.getByRole("heading", { name: "Secret Santa Gifts That Work Hard" }),
   ).toBeVisible();
 
   await page.getByRole("link", { name: "Open Guest storefront" }).click();
@@ -89,7 +89,7 @@ test("Operator publishes Father’s Day and revamps it into Secret Santa", async
   await expect(page.getByText("Secret Santa", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("heading", {
-      name: "Secret Santa gifts under £50 that do not feel last-minute.",
+      name: "Lead with affordable, giftable products that are healthy in stock.",
     }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Pour-Over Coffee Set" })).toBeVisible();
@@ -102,7 +102,7 @@ test("Operator publishes Father’s Day and revamps it into Secret Santa", async
   await expect(page.getByText("Father’s Day", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("heading", {
-      name: "Father’s Day gifts for grill masters, travelers, and everyday fixers.",
+      name: "Lead with practical gifts that have enough stock and commercial strength.",
     }),
   ).toBeVisible();
 

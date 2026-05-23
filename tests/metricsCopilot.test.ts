@@ -3,11 +3,12 @@ import {
   answerAndSaveMetricsQuestion,
   answerMetricsQuestion,
   approvedMetricsQuestions,
+  canRunMetricsQuestion,
   compareMetricsRuns,
   isApprovedMetricsQuestion,
 } from "@/domain/metricsCopilot";
 import { products } from "@/fixtures/products";
-import { fixtureCodexHarness } from "@/harness/codexHarness";
+import { fixtureCodexHarness } from "./support/fixtureCodexHarness";
 
 describe("metrics copilot", () => {
   it("approves the Manager golden metric questions", () => {
@@ -20,6 +21,9 @@ describe("metrics copilot", () => {
     ]);
     expect(isApprovedMetricsQuestion(approvedMetricsQuestions[0])).toBe(true);
     expect(isApprovedMetricsQuestion("Invent a live SQL query")).toBe(false);
+    expect(canRunMetricsQuestion(approvedMetricsQuestions[0], "fixture")).toBe(true);
+    expect(canRunMetricsQuestion("Show me under £50 products by margin", "fixture")).toBe(false);
+    expect(canRunMetricsQuestion("Show me under £50 products by margin", "app-server")).toBe(true);
   });
 
   it("answers the Father’s Day golden question with a validated GraphQL trace and product recommendations", async () => {
@@ -258,5 +262,53 @@ describe("metrics copilot", () => {
         validationErrors: [expect.stringContaining("missingField")],
       },
     ]);
+  });
+
+  it("executes generated GraphQL against the seeded catalog for custom Manager questions", async () => {
+    const result = await answerMetricsQuestion({
+      question: "Show me under £50 products with strong margin.",
+      harness: {
+        ...fixtureCodexHarness,
+        async generateGraphQLQuery(question) {
+          return {
+            question,
+            operationName: "UnderFiftyStrongMargin",
+            query: `query UnderFiftyStrongMargin {
+  products(filter: { maxPrice: 50 }) {
+    id
+    name
+    price
+    marginPercent
+    inventory
+    conversionRate
+    returnRate
+  }
+}`,
+            rationale: "Find affordable high-margin products.",
+            recommendedChart: "productTable",
+          };
+        },
+        async summarizeInsight() {
+          return {
+            title: "Affordable gifts have plenty of margin headroom.",
+            summary: "Under-£50 products are viable campaign candidates.",
+            recommendedProductIds: ["espresso-machine"],
+            risks: [],
+          };
+        },
+      },
+      products,
+    });
+
+    expect(result.trace.validation.status).toBe("valid");
+    expect(result.recommendedProducts.map((product) => product.id)).toEqual([
+      "cast-iron-grill-press",
+      "travel-grooming-kit",
+      "wireless-charging-valet",
+      "pour-over-coffee-set",
+      "desk-organizer-tray",
+    ]);
+    expect(result.chart.rows.map((row) => row.label)).toContain("Desk Organizer Tray");
+    expect(result.chart.rows.map((row) => row.label)).not.toContain("Countertop Espresso Machine");
   });
 });

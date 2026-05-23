@@ -232,7 +232,7 @@ function captureFrameBodyFor(stepId: MissionControlReplayStep["id"]): string {
     case "manager-insight":
       return "Ask the Father’s Day golden query and show the validated Codex metrics trace.";
     case "operator-proposal":
-      return "Turn the approved Manager insight into a fixture-backed campaign proposal.";
+      return "Turn the approved Manager insight into a static-data campaign proposal.";
     case "fathers-day-publish":
       return "Publish the Father’s Day storefront and make the Guest experience inspectable.";
     case "secret-santa-revamp":

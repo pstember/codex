@@ -8,6 +8,7 @@ import { requirePermission } from "@/domain/auth";
 import {
   answerAndSaveMetricsQuestion,
   approvedMetricsQuestions,
+  canRunMetricsQuestion,
   isApprovedMetricsQuestion,
 } from "@/domain/metricsCopilot";
 import { products } from "@/fixtures/products";
@@ -23,9 +24,16 @@ export async function runMetricsQuestionAction(formData: FormData) {
 
   requirePermission(user, "ask_deep_metrics");
 
-  const question = String(formData.get("question") ?? approvedMetricsQuestions[0]);
+  const codexHarness = getCodexHarness();
+  const selectedQuestion = String(formData.get("question") ?? approvedMetricsQuestions[0]).trim();
+  const customQuestion = String(formData.get("customQuestion") ?? "").trim();
+  const question = customQuestion || selectedQuestion;
 
-  if (!isApprovedMetricsQuestion(question)) {
+  if (!canRunMetricsQuestion(question, codexHarness.mode)) {
+    throw new Error("Custom Metrics questions require CODEX_HARNESS_MODE=app-server.");
+  }
+
+  if (!customQuestion && !isApprovedMetricsQuestion(question)) {
     throw new Error("Metrics question is not approved for this demo.");
   }
 
@@ -34,7 +42,7 @@ export async function runMetricsQuestionAction(formData: FormData) {
   await answerAndSaveMetricsQuestion({
     id: traceId,
     question,
-    harness: getCodexHarness(),
+    harness: codexHarness,
     products,
     createdByUserId: user.id,
     createdAt: new Date(),

@@ -5,7 +5,6 @@ import {
   buildMissionControlReplay,
   type MissionControlReplayStep,
 } from "@/domain/missionControlReplay";
-import { fatherDayCampaign, secretSantaCampaign } from "@/fixtures/campaigns";
 import { products } from "@/fixtures/products";
 import { getAppDatabase } from "@/persistence/appDatabase";
 
@@ -217,15 +216,23 @@ export default async function Home({ searchParams }: HomeProps) {
         </div>
         <div className="rounded-lg border border-neutral-300 bg-white p-6">
           <p className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
-            Fixture Campaigns
+            Live Inputs
           </p>
           <div className="mt-4 space-y-3">
-            {[fatherDayCampaign, secretSantaCampaign].map((campaign) => (
-              <div className="rounded-md border border-neutral-200 p-4" key={campaign.id}>
-                <p className="font-semibold">{campaign.name}</p>
-                <p className="mt-1 text-sm text-neutral-600">{campaign.summary}</p>
-              </div>
-            ))}
+            <div className="rounded-md border border-neutral-200 p-4">
+              <p className="font-semibold">Static catalog data</p>
+              <p className="mt-1 text-sm text-neutral-600">
+                Product margin, inventory, conversion, return risk, price, and tags drive quick demo
+                outputs.
+              </p>
+            </div>
+            <div className="rounded-md border border-neutral-200 p-4">
+              <p className="font-semibold">Codex App Server mode</p>
+              <p className="mt-1 text-sm text-neutral-600">
+                Custom Manager questions and generated artifacts use live Codex with server
+                validation.
+              </p>
+            </div>
           </div>
         </div>
         <div className="rounded-lg border border-neutral-300 bg-white p-6">

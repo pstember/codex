@@ -516,8 +516,8 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
         campaignId: "secret-santa-2026",
         prompt: "Playful office Secret Santa gifting.",
         alt: "A festive desk scene with wrapped small gifts from Atlas & Co.",
-        source: "fixture",
-        path: "/fixtures/secret-santa-hero.svg",
+        source: "static",
+        path: "/static-assets/secret-santa-hero.svg",
       };
     }
 
@@ -527,8 +527,8 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
         campaignId: "fathers-day-2026",
         prompt: "Warm outdoor Father’s Day gifting scene.",
         alt: "A warm outdoor Father’s Day gifting scene with grilling and travel essentials.",
-        source: "fixture",
-        path: "/fixtures/fathers-day-hero.svg",
+        source: "static",
+        path: "/static-assets/fathers-day-hero.svg",
       };
     }
 
@@ -537,8 +537,8 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
       campaignId: config.campaignId,
       prompt: "Evergreen Atlas & Co. product curation.",
       alt: "A clean Atlas & Co. arrangement of coffee, desk, and travel essentials.",
-      source: "fixture",
-      path: "/fixtures/baseline-hero.svg",
+      source: "static",
+      path: "/static-assets/baseline-hero.svg",
     };
   }
 

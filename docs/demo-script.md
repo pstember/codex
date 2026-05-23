@@ -25,13 +25,21 @@ For a real Codex App Server demo, start the app with:
 CODEX_HARNESS_MODE=app-server npm run dev
 ```
 
-The Manager and Operator generation actions will call `codex app-server` over stdio and validate the returned JSON. For deterministic rehearsal or if live Codex is unavailable, omit `CODEX_HARNESS_MODE` to use fixture mode.
+The Manager and Operator generation actions will call `codex app-server` over stdio and validate the returned JSON. For deterministic rehearsal or if live Codex is unavailable, omit `CODEX_HARNESS_MODE` to use static catalog mode.
+
+To show the real query path, use the Manager custom question box with a prompt such as:
+
+```text
+Which under £50 products have the best margin and enough inventory?
+```
+
+Codex should translate it into a GraphQL `products(filter: { maxPrice: 50 })` query, the app should validate it, execute it against the seeded Atlas catalog, and save the trace.
 
 ## Act 1: Father’s Day
 
 1. Open `/?step=manager-insight` and frame Mission Control.
 2. Log in as Store Manager and open `/manager`.
-3. Ask: “What should we promote for Father’s Day based on margin, inventory, and conversion?”
+3. Ask either the golden query “What should we promote for Father’s Day based on margin, inventory, and conversion?” or a live custom question in App Server mode.
 4. Show Codex run trace: schema read, GraphQL generated, query validated, data fetched, insight generated.
 5. Return to `/?step=operator-proposal` and show the checklist’s saved Manager trace link.
 6. Switch to Store Operator and open `/operator`.

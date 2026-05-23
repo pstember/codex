@@ -397,8 +397,8 @@ const fatherDayVisualAsset = {
   campaignId: "fathers-day-2026",
   prompt: "Warm outdoor Father’s Day gifting scene.",
   alt: "A warm outdoor Father’s Day gifting scene with grilling and travel essentials.",
-  source: "fixture" as const,
-  path: "/fixtures/fathers-day-hero.svg",
+  source: "static" as const,
+  path: "/static-assets/fathers-day-hero.svg",
 };
 
 const secretSantaVisualAsset = {
@@ -406,6 +406,6 @@ const secretSantaVisualAsset = {
   campaignId: "secret-santa-2026",
   prompt: "Playful office Secret Santa gifting.",
   alt: "A festive desk scene with wrapped small gifts from Atlas & Co.",
-  source: "fixture" as const,
-  path: "/fixtures/secret-santa-hero.svg",
+  source: "static" as const,
+  path: "/static-assets/secret-santa-hero.svg",
 };

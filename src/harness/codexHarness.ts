@@ -8,11 +8,10 @@ import {
 } from "@/domain/insight";
 import type { StorefrontConfig } from "@/domain/storefront";
 import { storefrontConfigSchema } from "@/domain/storefront";
-import { fatherDayCampaign, secretSantaCampaign } from "@/fixtures/campaigns";
-import { fatherDayStorefront, secretSantaStorefront } from "@/fixtures/storefront";
+import { products as seededProducts } from "@/fixtures/products";
 import { runCodexAppServerJsonPrompt } from "@/harness/codexAppServerClient";
 
-export type CodexHarnessMode = "fixture" | "cli" | "app-server";
+export type CodexHarnessMode = "static" | "fixture" | "cli" | "app-server";
 
 export interface CodexHarness {
   readonly mode: CodexHarnessMode;
@@ -46,24 +45,6 @@ const fatherDayQuery: GeneratedQuery = {
 }`,
   rationale:
     "Rank Father’s Day-tagged products by healthy inventory, strong margin, conversion, and low return risk.",
-  recommendedChart: "productTable",
-};
-
-const secretSantaQuery: GeneratedQuery = {
-  question: "Turn the Father’s Day campaign into a Secret Santa campaign under £50.",
-  operationName: "SecretSantaCandidates",
-  query: `query SecretSantaCandidates {
-  products(filter: { tags: ["secret-santa"], maxPrice: 50 }) {
-    id
-    name
-    price
-    marginPercent
-    inventory
-    returnRate
-  }
-}`,
-  rationale:
-    "Find giftable under-£50 products with enough stock, healthy margins, and low return-rate risk.",
   recommendedChart: "productTable",
 };
 
@@ -135,104 +116,140 @@ const managerMetricQueries: Record<string, GeneratedQuery> = {
   },
 };
 
-const managerMetricInsights: Record<string, InsightSummary> = {
-  "Which products have high inventory but are underexposed on the storefront?": {
-    title: "High-stock underexposed products are ready for more storefront weight.",
-    summary:
-      "Desk Organizer Tray, Pour-Over Coffee Set, and Cast Iron Grill Press carry deep stock with strong margins.",
-    recommendedProductIds: ["desk-organizer-tray", "pour-over-coffee-set", "cast-iron-grill-press"],
-    risks: ["Keep earbuds off this list because return rate is elevated."],
-  },
-  "Why did mobile conversion drop last week?": {
-    title: "Mobile conversion pressure is concentrated around high-consideration tech.",
-    summary:
-      "High-return tech and premium coffee products likely drag mobile conversion because shoppers need more confidence before checkout.",
-    recommendedProductIds: ["noise-canceling-earbuds", "espresso-machine"],
-    risks: ["Treat this as a diagnostic run before changing campaign placement."],
-  },
-  "What bundle would increase average order value for Father’s Day shoppers?": {
-    title: "A grilling-and-travel bundle can lift Father’s Day order value.",
-    summary:
-      "Bundle the Portable Charcoal Grill with Cast Iron Grill Press and Insulated Cooler Tote for strong margin and stock coverage.",
-    recommendedProductIds: [
-      "portable-charcoal-grill",
-      "cast-iron-grill-press",
-      "insulated-cooler-tote",
-    ],
-    risks: ["Avoid adding the espresso machine because low stock could create fulfillment risk."],
-  },
-  "Which products should we avoid promoting because of low margin, low stock, or high returns?": {
-    title: "Promotion risk is highest for low stock, weak margin, and high returns.",
-    summary:
-      "Countertop Espresso Machine and Noise-Canceling Earbuds should stay out of hero slots until risk improves.",
-    recommendedProductIds: ["espresso-machine", "noise-canceling-earbuds"],
-    risks: [
-      "Espresso Machine has low stock and weak margin.",
-      "Noise-Canceling Earbuds have a high return rate.",
-    ],
-  },
-};
-
-export const fixtureCodexHarness: CodexHarness = {
-  mode: "fixture",
+export const staticCommerceHarness: CodexHarness = {
+  mode: "static",
   async generateGraphQLQuery(question) {
-    if (managerMetricQueries[question]) {
-      return { ...managerMetricQueries[question] };
+    if (
+      question.toLowerCase().includes("under £50") ||
+      question.toLowerCase().includes("under 50")
+    ) {
+      return {
+        question,
+        operationName: "UnderFiftyProductCandidates",
+        query: `query UnderFiftyProductCandidates {
+  products(filter: { maxPrice: 50 }) {
+    id
+    name
+    category
+    price
+    marginPercent
+    inventory
+    conversionRate
+    returnRate
+  }
+}`,
+        rationale:
+          "Fetch under-£50 products with commercial health metrics so the app can rank the live catalog data.",
+        recommendedChart: "productTable",
+      };
     }
 
-    if (question.toLowerCase().includes("secret santa")) {
-      return { ...secretSantaQuery, question };
+    if (managerMetricQueries[question]) {
+      return { ...managerMetricQueries[question] };
     }
 
     return { ...fatherDayQuery, question };
   },
   async summarizeInsight(question) {
-    if (managerMetricInsights[question]) {
-      return { ...managerMetricInsights[question] };
-    }
-
-    if (question.toLowerCase().includes("secret santa")) {
-      return {
-        title: "Under-£50 giftability is strongest in coffee, desk, grooming, and compact tech.",
-        summary:
-          "Secret Santa should avoid high-return electronics and focus on high-stock small gifts.",
-        recommendedProductIds: secretSantaCampaign.productIds,
-        risks: ["Avoid noise-canceling earbuds because return rate is elevated."],
-      };
-    }
+    const candidates = selectProductsForQuestion(question);
+    const leadingNames = candidates
+      .slice(0, 3)
+      .map((product) => product.name)
+      .join(", ");
 
     return {
-      title: "Father’s Day opportunity favors grilling, travel, and everyday carry.",
-      summary:
-        "Outdoor and travel products combine high margin, healthy inventory, and strong conversion.",
-      recommendedProductIds: fatherDayCampaign.productIds,
-      risks: [
-        "Do not lead with the espresso machine because stock is low and margin is weak.",
-        "Avoid heavy promotion of earbuds because return rate is high.",
-      ],
+      title: `${leadingNames} lead this run on margin, stock, and conversion.`,
+      summary: `The current Atlas catalog returns ${candidates.length} products for this question, ranked from raw product metrics rather than a canned answer.`,
+      recommendedProductIds: candidates.map((product) => product.id),
+      risks: seededProducts
+        .filter(
+          (product) =>
+            !candidates.some((candidate) => candidate.id === product.id) &&
+            (product.marginPercent < 40 || product.inventory < 100 || product.returnRate > 0.05),
+        )
+        .map((product) => `${product.name} is excluded by margin, stock, or return-rate risk.`),
     };
   },
   async generateCampaignProposal(input) {
-    return input.season === "secret-santa" ? secretSantaCampaign : fatherDayCampaign;
+    const selectedProducts =
+      input.season === "secret-santa" ? selectSecretSantaProducts() : selectFatherDayProducts();
+
+    return {
+      id: input.season === "secret-santa" ? "secret-santa-2026" : "fathers-day-2026",
+      name:
+        input.season === "secret-santa"
+          ? "Secret Santa Gifts That Work Hard"
+          : "Father’s Day Picks From Live Catalog Signals",
+      season: input.season,
+      summary: `${selectedProducts.length} products selected from current catalog metrics for ${input.insightTitle}.`,
+      audience:
+        input.season === "secret-santa"
+          ? "Gift buyers shopping useful under-£50 products."
+          : "Gift buyers shopping practical Father’s Day products.",
+      productIds: selectedProducts.map((product) => product.id),
+      expectedImpact:
+        "Improve campaign quality by ranking live margin, inventory, conversion, and risk data.",
+      storefrontAngle:
+        input.season === "secret-santa"
+          ? "Lead with affordable, giftable products that are healthy in stock."
+          : "Lead with practical gifts that have enough stock and commercial strength.",
+    };
   },
   async generateStorefrontConfig(campaign) {
-    return campaign.season === "secret-santa" ? secretSantaStorefront : fatherDayStorefront;
+    const isSecretSanta = campaign.season === "secret-santa";
+    const heroProducts = campaign.productIds.slice(0, 2);
+
+    return {
+      id: `${campaign.id}-storefront`,
+      campaignId: campaign.id,
+      versionName: isSecretSanta ? "Secret Santa" : "Father’s Day",
+      style: {
+        theme: isSecretSanta ? "holiday" : "summer",
+        accentColor: isSecretSanta ? "#be123c" : "#b45309",
+        density: isSecretSanta ? "compact" : "editorial",
+      },
+      visualAsset: {
+        id: `${campaign.id}-hero-asset`,
+        campaignId: campaign.id,
+        prompt: `${campaign.name} hero visual generated from approved product data.`,
+        alt: `${campaign.name} hero visual for Atlas & Co.`,
+        source: "static",
+        path: isSecretSanta
+          ? "/static-assets/secret-santa-hero.svg"
+          : "/static-assets/fathers-day-hero.svg",
+      },
+      sections: [
+        {
+          id: `${campaign.id}-hero`,
+          type: "hero",
+          title: campaign.storefrontAngle,
+          body: campaign.summary,
+          productIds: heroProducts,
+        },
+        {
+          id: `${campaign.id}-rail`,
+          type: "productRail",
+          title: isSecretSanta ? "Live picks under £50" : "Live Father’s Day picks",
+          productIds: campaign.productIds,
+        },
+      ],
+    };
   },
 };
 
 export const cliCodexHarness: CodexHarness = {
   mode: "cli",
   async generateGraphQLQuery(question) {
-    return fixtureCodexHarness.generateGraphQLQuery(question);
+    return staticCommerceHarness.generateGraphQLQuery(question);
   },
   async summarizeInsight(question) {
-    return fixtureCodexHarness.summarizeInsight(question);
+    return staticCommerceHarness.summarizeInsight(question);
   },
   async generateCampaignProposal(input) {
-    return fixtureCodexHarness.generateCampaignProposal(input);
+    return staticCommerceHarness.generateCampaignProposal(input);
   },
   async generateStorefrontConfig(campaign) {
-    return fixtureCodexHarness.generateStorefrontConfig(campaign);
+    return staticCommerceHarness.generateStorefrontConfig(campaign);
   },
 };
 
@@ -246,7 +263,9 @@ export function createAppServerCodexHarness(
         prompt: [
           "Generate a commerce analytics GraphQL query for Atlas & Co.",
           `Business question: ${question}`,
-          "Return JSON only. The query must use the seeded commerce schema and include products fields.",
+          "Return JSON only. The query must use this schema:",
+          commerceGraphqlSchemaPrompt,
+          "Use only the products query. Do not invent fields.",
         ].join("\n"),
         schemaName: "GeneratedQuery",
         jsonSchema: generatedQueryJsonSchema,
@@ -291,7 +310,7 @@ export function createAppServerCodexHarness(
           "Generate a validated storefront config for Atlas & Co.",
           `Campaign JSON: ${JSON.stringify(campaign)}`,
           "Use only approved section types and product ids from the campaign.",
-          "visualAsset.path must point at an existing /fixtures/ hero image path.",
+          "visualAsset.path must point at an existing /static-assets/ hero image path.",
           "Return JSON only.",
         ].join("\n"),
         schemaName: "StorefrontConfig",
@@ -306,22 +325,92 @@ export function createAppServerCodexHarness(
 export const appServerCodexHarness: CodexHarness = createAppServerCodexHarness();
 
 export function getCodexHarness(): CodexHarness {
-  return process.env.CODEX_HARNESS_MODE === "app-server"
-    ? appServerCodexHarness
-    : fixtureCodexHarness;
+  return isCodexAppServerMode() ? appServerCodexHarness : staticCommerceHarness;
 }
 
-const seededProductIds = [
-  "portable-charcoal-grill",
-  "cast-iron-grill-press",
-  "insulated-cooler-tote",
-  "leather-travel-wallet",
-  "everyday-pocket-knife",
-  "pour-over-coffee-set",
-  "desk-organizer-tray",
-  "noise-canceling-earbuds",
-  "espresso-machine",
-];
+export function isCodexAppServerMode(): boolean {
+  return process.env.CODEX_HARNESS_MODE === "app-server";
+}
+
+function selectProductsForQuestion(question: string) {
+  const lowerQuestion = question.toLowerCase();
+
+  if (lowerQuestion.includes("under £50") || lowerQuestion.includes("under 50")) {
+    return rankProducts(
+      seededProducts.filter((product) => product.price <= 50 && product.inventory >= 100),
+    ).slice(0, 5);
+  }
+
+  if (lowerQuestion.includes("avoid") || lowerQuestion.includes("risk")) {
+    return seededProducts.filter(
+      (product) =>
+        product.marginPercent < 40 || product.inventory < 100 || product.returnRate > 0.05,
+    );
+  }
+
+  if (lowerQuestion.includes("mobile")) {
+    return seededProducts
+      .filter((product) => product.returnRate > 0.05 || product.conversionRate < 0.075)
+      .sort((left, right) => right.views - left.views)
+      .slice(0, 3);
+  }
+
+  if (lowerQuestion.includes("underexposed")) {
+    return rankProducts(seededProducts.filter((product) => product.inventory >= 500)).slice(0, 4);
+  }
+
+  return selectFatherDayProducts();
+}
+
+function selectFatherDayProducts() {
+  return rankProducts(
+    seededProducts.filter(
+      (product) => product.tags.includes("fathers-day") && product.inventory >= 100,
+    ),
+  ).slice(0, 6);
+}
+
+function selectSecretSantaProducts() {
+  return rankProducts(
+    seededProducts.filter((product) => product.price <= 50 && product.inventory >= 100),
+  ).slice(0, 5);
+}
+
+function rankProducts(productList: typeof seededProducts) {
+  return [...productList].sort((left, right) => productScore(right) - productScore(left));
+}
+
+function productScore(product: (typeof seededProducts)[number]) {
+  return (
+    product.marginPercent * 0.4 +
+    product.inventory * 0.02 +
+    product.conversionRate * 100 +
+    product.addToCartRate * 50 -
+    product.returnRate * 100
+  );
+}
+
+const seededProductIds = seededProducts.map((product) => product.id);
+
+const commerceGraphqlSchemaPrompt = `type Product {
+  id: ID!
+  name: String!
+  category: String!
+  price: Float!
+  marginPercent: Float!
+  inventory: Int!
+  conversionRate: Float!
+  returnRate: Float!
+}
+
+input ProductFilter {
+  tags: [String!]
+  maxPrice: Float
+}
+
+type Query {
+  products(filter: ProductFilter): [Product!]!
+}`;
 
 const generatedQueryJsonSchema = {
   type: "object",
@@ -410,8 +499,8 @@ const storefrontConfigJsonSchema = {
         campaignId: { type: "string" },
         prompt: { type: "string" },
         alt: { type: "string" },
-        source: { type: "string", enum: ["fixture", "generated"] },
-        path: { type: "string", pattern: "^/fixtures/" },
+        source: { type: "string", enum: ["static", "generated"] },
+        path: { type: "string", pattern: "^/static-assets/" },
       },
     },
     sections: {

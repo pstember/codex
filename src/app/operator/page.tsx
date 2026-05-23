@@ -239,7 +239,7 @@ export default async function OperatorPage({
               </>
             ) : (
               <p className="mt-3 text-sm leading-6 text-neutral-600">
-                Generate the first fixture-backed proposal from a Manager handoff.
+                Generate the first proposal from a Manager handoff.
               </p>
             )}
           </div>
@@ -331,7 +331,7 @@ export default async function OperatorPage({
               </>
             ) : (
               <p className="mt-3 text-sm leading-6 text-neutral-600">
-                Approve a valid campaign proposal to generate a fixture-backed storefront config.
+                Approve a valid campaign proposal to generate a validated storefront config.
               </p>
             )}
           </div>

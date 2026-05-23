@@ -236,7 +236,7 @@ describe("Mission Control replay", () => {
       storefrontName: "Baseline Atlas & Co.",
       role: "Store Operator",
       title: "Generate Father’s Day proposal",
-      body: "Turn the approved Manager insight into a fixture-backed campaign proposal.",
+      body: "Turn the approved Manager insight into a static-data campaign proposal.",
       primaryAction: {
         label: "Open Store Operator",
         href: "/operator",

@@ -14,11 +14,19 @@ Build `codexHarness` behind an interface with deterministic fixtures first, opti
 
 ## 2026-05-22: Codex App Server Is Locally Available
 
-The local Codex CLI includes `codex app-server`. By default it runs on `stdio://`; use `codex app-server --listen ws://127.0.0.1:4500` when a local WebSocket listener and `/readyz` or `/healthz` probes are useful. Keep the app-server harness optional and configuration-gated, with fixture mode remaining the deterministic default for tests and Loom replay.
+The local Codex CLI includes `codex app-server`. By default it runs on `stdio://`; use `codex app-server --listen ws://127.0.0.1:4500` when a local WebSocket listener and `/readyz` or `/healthz` probes are useful. Keep the app-server harness optional and configuration-gated, with deterministic static data available for quick rehearsals.
 
 ## 2026-05-23: App Server Harness Is Gated But Real
 
-Use `CODEX_HARNESS_MODE=app-server` to route Manager and Operator generation through a real `codex app-server` stdio session. Each request starts an ephemeral read-only thread, asks for JSON constrained by the target schema, and validates the result server-side. Fixture mode remains the default so tests and rehearsal stay deterministic.
+Use `CODEX_HARNESS_MODE=app-server` to route Manager and Operator generation through a real `codex app-server` stdio session. Each request starts an ephemeral read-only thread, asks for JSON constrained by the target schema, and validates the result server-side. Static catalog mode remains the default so rehearsals stay deterministic without runtime fixtures.
+
+## 2026-05-23: Golden Queries Plus Live Custom Questions
+
+Keep the prebuilt Manager golden queries for a quick, reliable demo path, but allow custom Manager questions only in `CODEX_HARNESS_MODE=app-server`. Custom questions must be translated by Codex into the fixed commerce GraphQL schema, validated server-side, executed against the seeded catalog, and persisted as normal Metrics traces.
+
+## 2026-05-23: Runtime Fixtures Are Test-Only
+
+Runtime demo paths should use static raw catalog data or live Codex App Server output. Deterministic fixture harnesses stay in test support, and static visual assets live under `public/static-assets/` instead of being labeled as fixture output.
 
 ## 2026-05-21: Constrained Generation
 
@@ -38,7 +46,7 @@ Run `next dev --webpack` and `next build --webpack` because Next 16 Turbopack cu
 
 ## 2026-05-22: Storefront Config Drafts Are Validated Before Review
 
-Operator-approved campaign proposals generate fixture-backed storefront configs through the Codex harness, then validate the config schema, campaign linkage, approved section types, and product references before saving to SQLite.
+Operator-approved campaign proposals generate storefront configs through the Codex harness, then validate the config schema, campaign linkage, approved section types, and product references before saving to SQLite.
 
 ## 2026-05-22: Published Storefront Versions Are Separate From Generated Drafts
 
