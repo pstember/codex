@@ -32,5 +32,6 @@ Maintain an 80% coverage target for core app logic. UI boilerplate can be exclud
 ## Golden Paths
 
 - Manager asks the Father’s Day promotion query and receives a valid GraphQL query and recommendation shape.
-- Operator transforms the Father’s Day proposal into a Secret Santa campaign under £50.
-- Generated campaign and storefront configs only reference valid products and approved sections.
+- Operator generates an event storefront draft, reviews the validated config, and publishes it.
+- Generated storefront configs only reference valid products and approved sections.
+- `npm run db:fixture` creates a clean packaged SQLite fixture without sessions, metrics traces, campaign proposals, Codex run events, or duplicated analytics fixture tables.

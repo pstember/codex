@@ -1,7 +1,5 @@
 import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { commerceData } from "@/fixtures/commerce";
-import { products } from "@/fixtures/products";
 import { demoUsers } from "@/fixtures/users";
 import { type CommerceDatabase, createCommerceDatabase } from "@/persistence/database";
 
@@ -16,8 +14,6 @@ export function getAppDatabase(): CommerceDatabase {
       mkdirSync(dirname(databasePath), { recursive: true });
     }
     database = createCommerceDatabase(databasePath);
-    database.seedProducts(products);
-    database.seedCommerceData(commerceData);
     database.seedUsers(demoUsers);
   }
 

@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { StorefrontConfig } from "@/domain/storefront";
-import type { GeneratedStorefrontConfig } from "@/domain/storefrontGeneration";
+import type { GeneratedStorefrontConfig } from "@/domain/storefrontDraft";
 import {
+  buildStaffStorefrontVersionSelection,
+  buildStorefrontGalleryEntries,
   compareStorefrontVersions,
+  publishBaselineStorefront,
   publishStorefrontConfig,
   resolveGuestStorefrontSelection,
+  resolveStaffStorefrontPreview,
   rollbackStorefrontVersion,
 } from "@/domain/storefrontPublishing";
 import {
@@ -14,7 +18,7 @@ import {
 } from "@/fixtures/storefront";
 
 describe("storefront publishing", () => {
-  it("publishes a valid generated config as the active Guest storefront version", () => {
+  it("publishes a ready generated config as the active Guest storefront version", () => {
     const savedVersions: unknown[] = [];
 
     const version = publishStorefrontConfig({
@@ -41,14 +45,13 @@ describe("storefront publishing", () => {
     expect(savedVersions).toEqual([version]);
   });
 
-  it("rejects invalid generated configs before they can be published", () => {
+  it("rejects drafts that are not ready before they can be published", () => {
     expect(() =>
       publishStorefrontConfig({
         id: "version-invalid",
         storefrontConfig: {
           ...fatherDayGeneratedConfig,
-          validationStatus: "invalid",
-          validationErrors: ["Storefront section references unknown product."],
+          validationStatus: "draft",
         },
         publishedByUserId: "demo-operator",
         publishedAt: new Date("2026-05-22T15:00:00.000Z"),
@@ -56,7 +59,33 @@ describe("storefront publishing", () => {
           savePublishedStorefrontVersion() {},
         },
       }),
-    ).toThrow("Only valid storefront configs can be published.");
+    ).toThrow("Only ready storefront configs can be published.");
+  });
+
+  it("blocks invalid drafts from being marked publishable in gallery entries", () => {
+    expect(
+      buildStorefrontGalleryEntries({
+        drafts: [
+          {
+            ...fatherDayGeneratedConfig,
+            validationStatus: "invalid",
+            validationErrors: ["Broken palette."],
+          },
+        ],
+        activeVersion: null,
+        baseline: baselineStorefront,
+      }),
+    ).toMatchObject([
+      {
+        id: "basic",
+        canPublish: true,
+      },
+      {
+        id: "storefront-draft-1",
+        validationStatus: "invalid",
+        canPublish: false,
+      },
+    ]);
   });
 
   it("rolls back by creating a new active version from a prior published version", () => {
@@ -111,25 +140,78 @@ describe("storefront publishing", () => {
         afterBody: "Playful, useful, and easy-to-ship picks for office gift exchanges.",
       },
       visualAssetChange: {
-        beforePrompt: "Evergreen Atlas & Co. product curation.",
+        beforePrompt:
+          "Bright Atlas & Co. tabletop hero with coffee, desk, and travel essentials in a clean everyday retail style.",
         afterPrompt: "Playful office Secret Santa gifting.",
-        beforePath: "/static-assets/baseline-hero.svg",
+        beforePath: "/static-assets/basic-hero.svg",
         afterPath: "/static-assets/secret-santa-hero.svg",
       },
+      textChanges: [
+        {
+          label: "Selection name",
+          before: "Baseline Atlas & Co.",
+          after: "Secret Santa",
+        },
+        {
+          label: "Hero title",
+          before: "Curated goods for useful everyday rituals.",
+          after: "Secret Santa gifts under £50 that do not feel last-minute.",
+        },
+        {
+          label: "Hero copy",
+          before: "Home, travel, coffee, grooming, and giftable essentials from Atlas & Co.",
+          after: "Playful, useful, and easy-to-ship picks for office gift exchanges.",
+        },
+        {
+          label: "Hero visual prompt",
+          before:
+            "Bright Atlas & Co. tabletop hero with coffee, desk, and travel essentials in a clean everyday retail style.",
+          after: "Playful office Secret Santa gifting.",
+        },
+        {
+          label: "Image alt text",
+          before:
+            "A bright Atlas & Co. tabletop scene with coffee gear, a desk lamp, and everyday gift essentials.",
+          after: "A festive desk scene with wrapped small gifts from Atlas & Co.",
+        },
+        {
+          label: "Current offer title",
+          before: "Useful gifts, ready now",
+          after: "Safe bets under £50",
+        },
+        {
+          label: "Current offer copy",
+          before: "A current edit of high-stock everyday gifts with practical appeal.",
+          after:
+            "A current offer built from affordable products with practical workplace gift appeal.",
+        },
+        {
+          label: "Spotlight title",
+          before: "Spotlight on better coffee breaks",
+          after: "Spotlight: Pour-Over Coffee Set",
+        },
+        {
+          label: "Spotlight copy",
+          before:
+            "The Pour-Over Coffee Set leads the baseline shop because it is giftable, replenishable, and easy to explain.",
+          after:
+            "A compact coffee gift that feels considered, useful, and safely inside the under-£50 brief.",
+        },
+      ],
       strategicSummary: [
         "Campaign shifted from Baseline Atlas & Co. to Secret Santa.",
         "Hero moved from everyday curation to under-£50 office gifting.",
-        "Creative asset changed from /static-assets/baseline-hero.svg to /static-assets/secret-santa-hero.svg.",
+        "Creative asset changed from /static-assets/basic-hero.svg to /static-assets/secret-santa-hero.svg.",
       ],
       styleChanges: [
         {
           label: "Theme",
-          before: "heritage",
+          before: "basic",
           after: "holiday",
         },
         {
           label: "Accent color",
-          before: "#0f766e",
+          before: "#2563eb",
           after: "#be123c",
         },
         {
@@ -142,14 +224,19 @@ describe("storefront publishing", () => {
         added: [
           "Secret Santa gifts under £50 that do not feel last-minute.",
           "Safe bets under £50",
+          "Spotlight: Pour-Over Coffee Set",
         ],
-        removed: ["Curated goods for useful everyday rituals.", "Popular this week"],
+        removed: [
+          "Curated goods for useful everyday rituals.",
+          "Useful gifts, ready now",
+          "Spotlight on better coffee breaks",
+        ],
         unchanged: [],
       },
       productChanges: {
         added: ["cast-iron-grill-press", "travel-grooming-kit"],
-        removed: [],
-        unchanged: ["desk-organizer-tray", "pour-over-coffee-set", "wireless-charging-valet"],
+        removed: ["desk-organizer-tray"],
+        unchanged: ["pour-over-coffee-set", "wireless-charging-valet"],
       },
     });
   });
@@ -183,14 +270,16 @@ describe("storefront publishing", () => {
         added: [
           "Secret Santa gifts under £50 that do not feel last-minute.",
           "Safe bets under £50",
+          "Spotlight: Pour-Over Coffee Set",
         ],
         removed: [
           "Father’s Day gifts for grill masters, travelers, and everyday fixers.",
           "Build the weekend-ready bundle",
+          "Spotlight: Portable Charcoal Grill",
         ],
       },
       productChanges: {
-        added: ["desk-organizer-tray", "pour-over-coffee-set"],
+        added: ["cast-iron-grill-press", "pour-over-coffee-set"],
         removed: ["leather-weekender-bag", "portable-charcoal-grill"],
       },
     });
@@ -259,7 +348,7 @@ describe("storefront publishing", () => {
     ).toMatchObject({
       storefront: secretSantaStorefront,
       selectedVersionId: "version-2",
-      statusLabel: "Viewing active version",
+      statusLabel: "Viewing current version",
     });
     expect(
       resolveGuestStorefrontSelection({
@@ -271,7 +360,7 @@ describe("storefront publishing", () => {
     ).toMatchObject({
       storefront: secretSantaStorefront,
       selectedVersionId: "version-2",
-      statusLabel: "Viewing active version",
+      statusLabel: "Viewing current version",
     });
   });
 
@@ -296,13 +385,196 @@ describe("storefront publishing", () => {
       statusLabel: "Previewing baseline",
     });
   });
+
+  it("always places a non-deletable Basic Atlas & Co. entry first in the style gallery", () => {
+    expect(
+      buildStorefrontGalleryEntries({
+        drafts: [fatherDayGeneratedConfig],
+        activeVersion: publishedVersion({
+          id: "version-1",
+          config: fatherDayStorefront,
+          status: "active",
+        }),
+        baseline: baselineStorefront,
+        previewStorefrontId: "basic",
+      }),
+    ).toMatchObject([
+      {
+        id: "basic",
+        versionName: "Basic Atlas & Co.",
+        kind: "basic",
+        canDelete: false,
+        canPublish: true,
+        isPreviewing: true,
+        isLive: false,
+        config: {
+          versionName: "Baseline Atlas & Co.",
+        },
+      },
+      {
+        id: "storefront-draft-1",
+        versionName: "Father’s Day",
+        kind: "draft",
+        canDelete: true,
+        validationStatus: "ready",
+        canPublish: true,
+        isPreviewing: false,
+        isLive: true,
+      },
+    ]);
+  });
+
+  it("builds homepage staff controls from gallery entries and marks the live version as current", () => {
+    const galleryEntries = buildStorefrontGalleryEntries({
+      drafts: [fatherDayGeneratedConfig],
+      activeVersion: publishedVersion({
+        id: "version-1",
+        config: fatherDayStorefront,
+        status: "active",
+      }),
+      baseline: baselineStorefront,
+      previewStorefrontId: null,
+    });
+
+    expect(
+      buildStaffStorefrontVersionSelection({
+        galleryEntries,
+        previewStorefrontId: null,
+      }),
+    ).toEqual({
+      selectedEntryId: "storefront-draft-1",
+      selectedEntryVersionName: "Father’s Day",
+      options: [
+        { id: "basic", label: "Basic Atlas & Co.", status: "basic" },
+        { id: "storefront-draft-1", label: "Father’s Day", status: "current" },
+      ],
+      previewActionLabel: "Preview",
+      applyActionLabel: "Current",
+      isApplyDisabled: true,
+    });
+  });
+
+  it("publishes the basic storefront as a new active version for everyone", () => {
+    const savedVersions: unknown[] = [];
+
+    const version = publishBaselineStorefront({
+      id: "version-basic",
+      baseline: baselineStorefront,
+      publishedByUserId: "demo-operator",
+      publishedAt: new Date("2026-05-24T10:00:00.000Z"),
+      publicationStore: {
+        savePublishedStorefrontVersion(savedVersion) {
+          savedVersions.push(savedVersion);
+        },
+      },
+    });
+
+    expect(version).toEqual({
+      id: "version-basic",
+      sourceStorefrontConfigId: "basic",
+      config: {
+        ...baselineStorefront,
+        versionName: "Basic Atlas & Co.",
+      },
+      status: "active",
+      rollbackOfVersionId: null,
+      publishedByUserId: "demo-operator",
+      publishedAt: new Date("2026-05-24T10:00:00.000Z"),
+    });
+    expect(savedVersions).toEqual([version]);
+  });
+
+  it("resolves a staff preview without changing the Guest active storefront", () => {
+    const activeVersion = publishedVersion({
+      id: "version-1",
+      config: fatherDayStorefront,
+      status: "active",
+    });
+
+    const preview = resolveStaffStorefrontPreview({
+      previewStorefrontId: "basic",
+      drafts: [fatherDayGeneratedConfig],
+      activeVersion,
+      publishedVersions: [activeVersion],
+      baseline: baselineStorefront,
+    });
+
+    expect(preview).toMatchObject({
+      storefront: {
+        versionName: "Basic Atlas & Co.",
+      },
+      previewStorefrontId: "basic",
+      isPreviewing: true,
+      label: "You are previewing Basic Atlas & Co.",
+    });
+    expect(
+      resolveGuestStorefrontSelection({
+        activeVersion,
+        publishedVersions: [activeVersion],
+        baseline: baselineStorefront,
+      }).storefront,
+    ).toBe(fatherDayStorefront);
+  });
+
+  it("resolves staff draft previews, current published previews, and unknown preview ids", () => {
+    const activeVersion = publishedVersion({
+      id: "version-1",
+      config: fatherDayStorefront,
+      status: "active",
+    });
+
+    expect(
+      resolveStaffStorefrontPreview({
+        previewStorefrontId: "storefront-draft-1",
+        drafts: [fatherDayGeneratedConfig],
+        activeVersion,
+        publishedVersions: [activeVersion],
+        baseline: baselineStorefront,
+      }),
+    ).toMatchObject({
+      storefront: fatherDayStorefront,
+      previewStorefrontId: "storefront-draft-1",
+      isPreviewing: true,
+      label: "You are previewing Father’s Day",
+    });
+
+    expect(
+      resolveStaffStorefrontPreview({
+        previewStorefrontId: "version-1",
+        drafts: [],
+        activeVersion,
+        publishedVersions: [activeVersion],
+        baseline: baselineStorefront,
+      }),
+    ).toMatchObject({
+      storefront: fatherDayStorefront,
+      previewStorefrontId: "version-1",
+      isPreviewing: false,
+      label: null,
+    });
+
+    expect(
+      resolveStaffStorefrontPreview({
+        previewStorefrontId: "missing-preview",
+        drafts: [],
+        activeVersion,
+        publishedVersions: [activeVersion],
+        baseline: baselineStorefront,
+      }),
+    ).toMatchObject({
+      storefront: fatherDayStorefront,
+      previewStorefrontId: null,
+      isPreviewing: false,
+      label: null,
+    });
+  });
 });
 
 const fatherDayGeneratedConfig: GeneratedStorefrontConfig = {
   id: "storefront-draft-1",
-  sourceProposalId: "proposal-1",
+  sourceDraftKey: "adaptation:summer-hosting",
   config: fatherDayStorefront,
-  validationStatus: "valid",
+  validationStatus: "ready",
   validationErrors: [],
   createdByUserId: "demo-operator",
   createdAt: new Date("2026-05-22T14:00:00.000Z"),

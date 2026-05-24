@@ -1,19 +1,42 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { defaultStorefrontHeroImageComposition } from "@/domain/storefront";
 import type { PublishedStorefrontVersion } from "@/domain/storefrontPublishing";
-import { products } from "@/fixtures/products";
 import { demoUsers } from "@/fixtures/users";
 import { createCommerceDatabase } from "@/persistence/database";
 
+const { DatabaseSync } = createRequire(import.meta.url)(
+  "node:sqlite",
+) as typeof import("node:sqlite");
+
 describe("commerce SQLite database", () => {
-  it("creates the schema and persists seeded products", () => {
-    const database = createCommerceDatabase();
+  it("creates only runtime persistence tables, not duplicated analytics fixture tables", () => {
+    const directory = mkdtempSync(join(tmpdir(), "commerce-db-schema-"));
+    const databasePath = join(directory, "commerce.db");
 
     try {
-      database.seedProducts(products);
-
-      expect(database.countProducts()).toBe(products.length);
-    } finally {
+      createCommerceDatabase(databasePath).close();
+      const database = new DatabaseSync(databasePath);
+      const tables = database
+        .prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name;")
+        .all()
+        .map((row) => (row as { name: string }).name)
+        .filter((name) => name !== "sqlite_sequence");
       database.close();
+
+      expect(tables).toEqual([
+        "codex_run_events",
+        "codex_runs",
+        "published_storefront_versions",
+        "sessions",
+        "storefront_configs",
+        "users",
+      ]);
+    } finally {
+      rmSync(directory, { force: true, recursive: true });
     }
   });
 
@@ -50,113 +73,13 @@ describe("commerce SQLite database", () => {
     }
   });
 
-  it("persists and lists recent Metrics Copilot traces", () => {
-    const database = createCommerceDatabase();
-
-    try {
-      database.saveMetricsTrace({
-        id: "trace-1",
-        question: "What should we promote for Father’s Day?",
-        operationName: "FatherDayPromotionCandidates",
-        validationStatus: "valid",
-        validationErrors: [],
-        generatedGraphql: "query FatherDayPromotionCandidates { products { id } }",
-        rationale: "Rank products by margin, inventory, and conversion.",
-        chartType: "productTable",
-        recommendedProductIds: ["portable-charcoal-grill"],
-        createdByUserId: "demo-manager",
-        createdAt: new Date("2026-05-22T10:00:00.000Z"),
-      });
-
-      expect(database.listRecentMetricsTraces()).toEqual([
-        {
-          id: "trace-1",
-          question: "What should we promote for Father’s Day?",
-          operationName: "FatherDayPromotionCandidates",
-          validationStatus: "valid",
-          validationErrors: [],
-          generatedGraphql: "query FatherDayPromotionCandidates { products { id } }",
-          rationale: "Rank products by margin, inventory, and conversion.",
-          chartType: "productTable",
-          recommendedProductIds: ["portable-charcoal-grill"],
-          createdByUserId: "demo-manager",
-          createdAt: new Date("2026-05-22T10:00:00.000Z"),
-        },
-      ]);
-      expect(database.findMetricsTraceById("trace-1")).toEqual({
-        id: "trace-1",
-        question: "What should we promote for Father’s Day?",
-        operationName: "FatherDayPromotionCandidates",
-        validationStatus: "valid",
-        validationErrors: [],
-        generatedGraphql: "query FatherDayPromotionCandidates { products { id } }",
-        rationale: "Rank products by margin, inventory, and conversion.",
-        chartType: "productTable",
-        recommendedProductIds: ["portable-charcoal-grill"],
-        createdByUserId: "demo-manager",
-        createdAt: new Date("2026-05-22T10:00:00.000Z"),
-      });
-    } finally {
-      database.close();
-    }
-  });
-
-  it("persists Operator campaign proposals for review", () => {
-    const database = createCommerceDatabase();
-
-    try {
-      database.saveCampaignProposal({
-        id: "proposal-1",
-        sourceTraceId: "trace-1",
-        campaign: {
-          id: "fathers-day-2026",
-          name: "Grill, Travel, and Everyday Carry",
-          season: "fathers-day",
-          summary: "A fixture campaign.",
-          audience: "Father’s Day gift buyers.",
-          productIds: ["portable-charcoal-grill"],
-          expectedImpact: "Lift gift conversion.",
-          storefrontAngle: "Confident Father’s Day gifting.",
-        },
-        validationStatus: "valid",
-        validationErrors: [],
-        createdByUserId: "demo-operator",
-        createdAt: new Date("2026-05-22T12:00:00.000Z"),
-      });
-
-      expect(database.listRecentCampaignProposals()).toEqual([
-        {
-          id: "proposal-1",
-          sourceTraceId: "trace-1",
-          campaign: {
-            id: "fathers-day-2026",
-            name: "Grill, Travel, and Everyday Carry",
-            season: "fathers-day",
-            summary: "A fixture campaign.",
-            audience: "Father’s Day gift buyers.",
-            productIds: ["portable-charcoal-grill"],
-            expectedImpact: "Lift gift conversion.",
-            storefrontAngle: "Confident Father’s Day gifting.",
-          },
-          validationStatus: "valid",
-          validationErrors: [],
-          createdByUserId: "demo-operator",
-          createdAt: new Date("2026-05-22T12:00:00.000Z"),
-        },
-      ]);
-      expect(database.findCampaignProposalById("proposal-1")?.sourceTraceId).toBe("trace-1");
-    } finally {
-      database.close();
-    }
-  });
-
   it("persists generated storefront configs for Operator review", () => {
     const database = createCommerceDatabase();
 
     try {
       database.saveStorefrontConfig({
         id: "storefront-draft-1",
-        sourceProposalId: "proposal-1",
+        sourceDraftKey: "adaptation:summer-hosting",
         config: {
           id: "fathers-day-storefront",
           campaignId: "fathers-day-2026",
@@ -177,7 +100,7 @@ describe("commerce SQLite database", () => {
             },
           ],
         },
-        validationStatus: "valid",
+        validationStatus: "draft",
         validationErrors: [],
         createdByUserId: "demo-operator",
         createdAt: new Date("2026-05-22T14:00:00.000Z"),
@@ -186,7 +109,7 @@ describe("commerce SQLite database", () => {
       expect(database.listRecentStorefrontConfigs()).toEqual([
         {
           id: "storefront-draft-1",
-          sourceProposalId: "proposal-1",
+          sourceDraftKey: "adaptation:summer-hosting",
           config: {
             id: "fathers-day-storefront",
             campaignId: "fathers-day-2026",
@@ -201,21 +124,172 @@ describe("commerce SQLite database", () => {
               {
                 id: "fd-hero",
                 type: "hero",
+                sectionIntent: "heroProduct",
                 title: "Father’s Day gifts",
                 body: "Practical picks.",
                 productIds: ["portable-charcoal-grill"],
               },
             ],
           },
-          validationStatus: "valid",
+          validationStatus: "draft",
           validationErrors: [],
           createdByUserId: "demo-operator",
           createdAt: new Date("2026-05-22T14:00:00.000Z"),
         },
       ]);
-      expect(database.findStorefrontConfigById("storefront-draft-1")?.sourceProposalId).toBe(
-        "proposal-1",
+      expect(database.findStorefrontConfigById("storefront-draft-1")?.sourceDraftKey).toBe(
+        "adaptation:summer-hosting",
       );
+    } finally {
+      database.close();
+    }
+  });
+
+  it("persists storefront adaptation drafts with generated image metadata", () => {
+    const database = createCommerceDatabase();
+
+    try {
+      database.saveStorefrontConfig({
+        id: "halloween-draft-1",
+        sourceDraftKey: "adaptation:halloween",
+        config: {
+          id: "event-halloween-storefront",
+          campaignId: "event-halloween",
+          versionName: "Halloween",
+          style: {
+            theme: "halloween",
+            accentColor: "#f97316",
+            density: "editorial",
+            palette: {
+              background: "#12091f",
+              surface: "#fff7ed",
+              text: "#f8fafc",
+              muted: "#fde7c8",
+              border: "#f97316",
+              accent: "#f97316",
+              secondaryAccent: "#a3e635",
+              button: "#f97316",
+              buttonText: "#12091f",
+            },
+          },
+          visualAsset: {
+            id: "event-halloween-hero-asset",
+            campaignId: "event-halloween",
+            prompt: "Cosy Halloween office gifting with useful products.",
+            alt: "A generated Halloween hero scene for Atlas & Co. gifts.",
+            source: "generated",
+            path: "/static-assets/generated-halloween-hero.svg",
+            composition: defaultStorefrontHeroImageComposition,
+          },
+          sections: [
+            {
+              id: "event-halloween-hero",
+              type: "hero",
+              title: "Halloween gifts with a useful little shiver.",
+              body: "Cosy desk, coffee, and travel picks for small surprises.",
+              productIds: ["pour-over-coffee-set"],
+            },
+          ],
+        },
+        validationStatus: "draft",
+        validationErrors: [],
+        createdByUserId: "demo-operator",
+        createdAt: new Date("2026-05-23T11:00:00.000Z"),
+      });
+
+      expect(database.findStorefrontConfigById("halloween-draft-1")).toMatchObject({
+        id: "halloween-draft-1",
+        sourceDraftKey: "adaptation:halloween",
+        validationStatus: "draft",
+        config: {
+          versionName: "Halloween",
+          style: {
+            theme: "halloween",
+            palette: {
+              background: "#12091f",
+              accent: "#f97316",
+              secondaryAccent: "#a3e635",
+            },
+          },
+          visualAsset: {
+            source: "generated",
+            path: "/static-assets/generated-halloween-hero.svg",
+          },
+        },
+      });
+    } finally {
+      database.close();
+    }
+  });
+
+  it("deletes generated storefront drafts without touching published versions", () => {
+    const database = createCommerceDatabase();
+
+    try {
+      database.saveStorefrontConfig({
+        id: "storefront-draft-delete",
+        sourceDraftKey: "adaptation:halloween",
+        config: {
+          id: "event-halloween-storefront",
+          campaignId: "event-halloween",
+          versionName: "Halloween",
+          style: {
+            theme: "halloween",
+            accentColor: "#f97316",
+            density: "editorial",
+          },
+          visualAsset: fatherDayVisualAsset,
+          sections: [
+            {
+              id: "event-halloween-hero",
+              type: "hero",
+              title: "Halloween gifts",
+              body: "Useful seasonal picks.",
+              productIds: ["pour-over-coffee-set"],
+            },
+          ],
+        },
+        validationStatus: "draft",
+        validationErrors: [],
+        createdByUserId: "demo-operator",
+        createdAt: new Date("2026-05-23T12:00:00.000Z"),
+      });
+      database.savePublishedStorefrontVersion({
+        id: "published-halloween",
+        sourceStorefrontConfigId: "storefront-draft-delete",
+        config: {
+          id: "event-halloween-storefront",
+          campaignId: "event-halloween",
+          versionName: "Halloween",
+          style: {
+            theme: "halloween",
+            accentColor: "#f97316",
+            density: "editorial",
+          },
+          visualAsset: fatherDayVisualAsset,
+          sections: [
+            {
+              id: "event-halloween-hero",
+              type: "hero",
+              title: "Halloween gifts",
+              body: "Useful seasonal picks.",
+              productIds: ["pour-over-coffee-set"],
+            },
+          ],
+        },
+        status: "active",
+        rollbackOfVersionId: null,
+        publishedByUserId: "demo-operator",
+        publishedAt: new Date("2026-05-23T12:05:00.000Z"),
+      });
+
+      database.deleteStorefrontConfig("storefront-draft-delete");
+
+      expect(database.findStorefrontConfigById("storefront-draft-delete")).toBeNull();
+      expect(database.findPublishedStorefrontVersionById("published-halloween")).toMatchObject({
+        id: "published-halloween",
+        config: { versionName: "Halloween" },
+      });
     } finally {
       database.close();
     }
@@ -401,6 +475,7 @@ const fatherDayVisualAsset = {
   alt: "A warm outdoor Father’s Day gifting scene with grilling and travel essentials.",
   source: "static" as const,
   path: "/static-assets/fathers-day-hero.svg",
+  composition: defaultStorefrontHeroImageComposition,
 };
 
 const secretSantaVisualAsset = {
@@ -410,4 +485,5 @@ const secretSantaVisualAsset = {
   alt: "A festive desk scene with wrapped small gifts from Atlas & Co.",
   source: "static" as const,
   path: "/static-assets/secret-santa-hero.svg",
+  composition: defaultStorefrontHeroImageComposition,
 };

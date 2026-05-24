@@ -11,6 +11,8 @@ If the work changes product direction, architecture, constraints, or repeatable 
 ## Working Principles
 
 - Prefer clear product intent before implementation.
+- Ask clarifying questions when instructions are unclear or the goal is uncertain.
+- Write product copy for real end users, not for the project owner, agents, demos, or hackathon judges; keep it realistic and production-plausible.
 - Use test-first development for behavior changes unless the user explicitly waives it.
 - Keep solutions simple. Do not add abstractions before there is a real need.
 - Remove meaningful duplication when it improves clarity or reduces maintenance cost.

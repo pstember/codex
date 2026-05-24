@@ -20,10 +20,44 @@ export async function runCodexAppServerJsonPrompt<T>(input: {
   schemaName: string;
   jsonSchema: Record<string, unknown>;
 }): Promise<T> {
+  const result = await runCodexAppServerJsonPromptWithTrace<T>(input);
+
+  return result.value;
+}
+
+export async function runCodexAppServerJsonPromptWithTrace<T>(input: {
+  prompt: string;
+  schemaName: string;
+  jsonSchema: Record<string, unknown>;
+}): Promise<{
+  prompt: string;
+  requestPayload: string;
+  rawResponse: string;
+  schemaName: string;
+  value: T;
+}> {
   const client = new CodexAppServerStdioClient();
 
   try {
-    return await client.runJsonPrompt<T>(input);
+    return await client.runJsonPromptWithTrace<T>(input);
+  } finally {
+    client.close();
+  }
+}
+
+export type CodexAppServerImageResult = {
+  prompt: string;
+  revisedPrompt: string | null;
+  savedPath: string;
+};
+
+export async function runCodexAppServerImagePrompt(input: {
+  prompt: string;
+}): Promise<CodexAppServerImageResult> {
+  const client = new CodexAppServerStdioClient();
+
+  try {
+    return await client.runImagePrompt(input);
   } finally {
     client.close();
   }
@@ -45,6 +79,10 @@ class CodexAppServerStdioClient {
   >();
   private readonly agentMessageDeltas: string[] = [];
   private completedTurnText = "";
+  private completedImage: {
+    revisedPrompt: string | null;
+    savedPath: string | null;
+  } | null = null;
   private turnCompleted: {
     reject: (error: Error) => void;
     resolve: () => void;
@@ -74,6 +112,110 @@ class CodexAppServerStdioClient {
     schemaName: string;
     jsonSchema: Record<string, unknown>;
   }): Promise<T> {
+    const result = await this.runJsonPromptWithTrace<T>(input);
+
+    return result.value;
+  }
+
+  async runJsonPromptWithTrace<T>(input: {
+    prompt: string;
+    schemaName: string;
+    jsonSchema: Record<string, unknown>;
+  }): Promise<{
+    prompt: string;
+    requestPayload: string;
+    rawResponse: string;
+    schemaName: string;
+    value: T;
+  }> {
+    this.agentMessageDeltas.length = 0;
+    this.completedTurnText = "";
+
+    const initializePayload = {
+      clientInfo: {
+        name: "commerce-copilot-studio",
+        title: "Commerce Copilot Studio",
+        version: "0.1.0",
+      },
+      capabilities: {
+        experimentalApi: true,
+        requestAttestation: false,
+      },
+    };
+
+    await this.request("initialize", initializePayload);
+    this.notify("initialized");
+
+    const threadStartPayload = {
+      cwd: process.cwd(),
+      runtimeWorkspaceRoots: [process.cwd()],
+      approvalPolicy: "never",
+      sandbox: "read-only",
+      ephemeral: true,
+      experimentalRawEvents: false,
+      persistExtendedHistory: false,
+      baseInstructions:
+        "You are embedded in Commerce Copilot Studio. Return only valid JSON for the requested schema.",
+      developerInstructions:
+        "Do not run commands, edit files, or use tools. Produce deterministic, concise JSON only.",
+    };
+    const threadStart = (await this.request("thread/start", threadStartPayload)) as {
+      thread?: { id?: string };
+    };
+    const threadId = threadStart.thread?.id;
+
+    if (!threadId) {
+      throw new Error("Codex App Server did not return a thread id.");
+    }
+
+    const turnStartPayload = {
+      threadId,
+      input: [
+        {
+          type: "text",
+          text: input.prompt,
+          text_elements: [],
+        },
+      ],
+      outputSchema: input.jsonSchema,
+      approvalPolicy: "never",
+    };
+    const turnStart = (await this.request("turn/start", turnStartPayload)) as {
+      turn?: { id?: string };
+    };
+    const turnId = turnStart.turn?.id;
+
+    if (!turnId) {
+      throw new Error("Codex App Server did not return a turn id.");
+    }
+
+    await this.waitForTurnCompletion(turnId);
+
+    const rawResponse = this.agentMessageDeltas.join("") || this.completedTurnText;
+
+    return {
+      prompt: input.prompt,
+      requestPayload: JSON.stringify(
+        {
+          initialize: initializePayload,
+          initialized: {},
+          threadStart: threadStartPayload,
+          turnStart: turnStartPayload,
+        },
+        null,
+        2,
+      ),
+      rawResponse,
+      schemaName: input.schemaName,
+      value: parseJsonFromAssistantText<T>(rawResponse),
+    };
+  }
+
+  async runImagePrompt(input: { prompt: string }): Promise<CodexAppServerImageResult> {
+    this.agentMessageDeltas.length = 0;
+    this.completedTurnText = "";
+    this.completedImage = null;
+
     await this.request("initialize", {
       clientInfo: {
         name: "commerce-copilot-studio",
@@ -96,9 +238,9 @@ class CodexAppServerStdioClient {
       experimentalRawEvents: false,
       persistExtendedHistory: false,
       baseInstructions:
-        "You are embedded in Commerce Copilot Studio. Return only valid JSON for the requested schema.",
+        "You are embedded in Commerce Copilot Studio. Generate exactly one image for the requested storefront hero.",
       developerInstructions:
-        "Do not run commands, edit files, or use tools. Produce deterministic, concise JSON only.",
+        "Use image generation when the user asks for a hero image. Do not run commands, edit files, or call unrelated tools.",
     })) as { thread?: { id?: string } };
     const threadId = threadStart.thread?.id;
 
@@ -115,7 +257,6 @@ class CodexAppServerStdioClient {
           text_elements: [],
         },
       ],
-      outputSchema: input.jsonSchema,
       approvalPolicy: "never",
     })) as { turn?: { id?: string } };
     const turnId = turnStart.turn?.id;
@@ -126,9 +267,17 @@ class CodexAppServerStdioClient {
 
     await this.waitForTurnCompletion(turnId);
 
-    return parseJsonFromAssistantText<T>(
-      this.agentMessageDeltas.join("") || this.completedTurnText,
-    );
+    const completedImage = this.getCompletedImage();
+
+    if (!completedImage?.savedPath) {
+      throw new Error("Codex App Server did not return a generated image path.");
+    }
+
+    return {
+      prompt: input.prompt,
+      revisedPrompt: completedImage.revisedPrompt,
+      savedPath: completedImage.savedPath,
+    };
   }
 
   close() {
@@ -149,6 +298,13 @@ class CodexAppServerStdioClient {
 
   private notify(method: string) {
     this.write({ jsonrpc: "2.0", method });
+  }
+
+  private getCompletedImage(): {
+    revisedPrompt: string | null;
+    savedPath: string | null;
+  } | null {
+    return this.completedImage;
   }
 
   private write(payload: unknown) {
@@ -201,6 +357,8 @@ class CodexAppServerStdioClient {
       const params = message.params as {
         item?: {
           phase?: string | null;
+          revisedPrompt?: string | null;
+          savedPath?: string | null;
           text?: string;
           type?: string;
         };
@@ -208,6 +366,13 @@ class CodexAppServerStdioClient {
 
       if (params.item?.type === "agentMessage" && params.item.phase !== "interim") {
         this.completedTurnText += params.item.text ?? "";
+      }
+
+      if (params.item?.type === "imageGeneration") {
+        this.completedImage = {
+          revisedPrompt: params.item.revisedPrompt ?? null,
+          savedPath: params.item.savedPath ?? null,
+        };
       }
     }
 

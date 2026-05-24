@@ -33,6 +33,8 @@ const segments = [
   "outdoor-hosts",
   "home-office-upgraders",
   "premium-gifters",
+  "office-gift-buyers",
+  "office-admins",
 ] as const;
 
 const customerNames = [
@@ -60,6 +62,30 @@ const customerNames = [
   "Imogen Scott",
   "Kai Turner",
   "Ava Phillips",
+  "Bethany James",
+  "Niall O'Connor",
+  "Tara Singh",
+  "George Miller",
+  "Yasmin Grant",
+  "Rory Davies",
+  "Anika Mehta",
+  "Tom Wallace",
+  "Hannah Cole",
+  "Daniel Brooks",
+  "Leila Fraser",
+  "Ben Spencer",
+  "Megan Fox",
+  "Omar Farah",
+  "Lucy Hart",
+  "Callum Stone",
+  "Jasmine Bell",
+  "Ethan Wood",
+  "Martha Lane",
+  "Adam Sinclair",
+  "Freya Moss",
+  "Reuben Ellis",
+  "Chloe Webb",
+  "Louis Harper",
 ];
 
 export const addresses: CommerceAddress[] = customerNames.map((_name, index) => {
@@ -138,7 +164,7 @@ export const promotions: Promotion[] = [
   {
     id: "desk-gifts-under-50",
     title: "Desk Gifts Under £50",
-    segmentIds: ["secret-santa-buyers", "home-office-upgraders"],
+    segmentIds: ["secret-santa-buyers", "home-office-upgraders", "office-gift-buyers"],
     productIds: ["desk-organizer-tray", "wireless-charging-valet", "pour-over-coffee-set"],
     discountPercent: 10,
     startsAt: "2026-11-20T00:00:00.000Z",
@@ -155,19 +181,57 @@ export const promotions: Promotion[] = [
     endsAt: "2026-06-02T23:59:59.000Z",
     active: true,
   },
+  {
+    id: "office-secret-santa-bundles",
+    title: "Office Secret Santa Bundles",
+    segmentIds: ["secret-santa-buyers", "office-gift-buyers", "office-admins"],
+    productIds: [
+      "desk-organizer-tray",
+      "wireless-charging-valet",
+      "pour-over-coffee-set",
+      "travel-grooming-kit",
+    ],
+    discountPercent: 12,
+    startsAt: "2026-11-20T00:00:00.000Z",
+    endsAt: "2026-12-18T23:59:59.000Z",
+    active: true,
+  },
 ];
 
-export const orders: CommerceOrder[] = Array.from({ length: 120 }, (_, index) => {
+export const orders: CommerceOrder[] = Array.from({ length: 260 }, (_, index) => {
   const customer = customers[index % customers.length];
-  const firstProduct = products[(index + 6) % products.length];
+  const seasonalOffset = index >= 120 ? 9 : 6;
+  const firstProduct = products[(index + seasonalOffset) % products.length];
   const secondProduct = products[(index * 3 + 1) % products.length];
+  const thirdProduct = products[(index * 5 + 4) % products.length];
   const firstQuantity = 1 + (index % 2);
   const secondQuantity = index % 3 === 0 ? 2 : 1;
-  const subtotal = money(firstProduct.price * firstQuantity + secondProduct.price * secondQuantity);
-  const discountTotal = index % 5 === 0 ? money(subtotal * 0.1) : 0;
+  const thirdQuantity = index >= 120 && index % 4 === 0 ? 1 : 0;
+  const subtotal = money(
+    firstProduct.price * firstQuantity +
+      secondProduct.price * secondQuantity +
+      thirdProduct.price * thirdQuantity,
+  );
+  const discountTotal =
+    index >= 120 || index % 5 === 0 ? money(subtotal * seasonalDiscount(index)) : 0;
   const shippingTotal = subtotal >= 50 ? 0 : 3.95;
-  const channel = index % 7 === 0 ? "marketplace" : index % 11 === 0 ? "retail" : "online";
-  const status = index % 17 === 0 ? "returned" : index % 4 === 0 ? "shipped" : "fulfilled";
+  const channel =
+    index >= 120 && index % 6 === 0
+      ? "marketplace"
+      : index % 11 === 0
+        ? "retail"
+        : index % 7 === 0
+          ? "marketplace"
+          : "online";
+  const status = index % 8 === 0 ? "returned" : index % 4 === 0 ? "shipped" : "fulfilled";
+  const items = [
+    orderItem(index, firstProduct.id, firstQuantity, firstProduct.price, 1),
+    orderItem(index, secondProduct.id, secondQuantity, secondProduct.price, 2),
+  ];
+
+  if (thirdQuantity > 0) {
+    items.push(orderItem(index, thirdProduct.id, thirdQuantity, thirdProduct.price, 3));
+  }
 
   return {
     id: `ord-${String(index + 1).padStart(4, "0")}`,
@@ -181,15 +245,12 @@ export const orders: CommerceOrder[] = Array.from({ length: 120 }, (_, index) =>
     discountTotal,
     shippingTotal,
     grandTotal: money(subtotal - discountTotal + shippingTotal),
-    items: [
-      orderItem(index, firstProduct.id, firstQuantity, firstProduct.price, 1),
-      orderItem(index, secondProduct.id, secondQuantity, secondProduct.price, 2),
-    ],
+    items,
   };
 });
 
 export const returns: CommerceReturn[] = orders
-  .filter((_order, index) => index % 13 === 0)
+  .filter((_order, index) => index % 8 === 0)
   .map((order, index) => ({
     id: `ret-${String(index + 1).padStart(3, "0")}`,
     orderId: order.id,
@@ -202,22 +263,33 @@ export const returns: CommerceReturn[] = orders
     refundAmount: order.items[0].lineTotal,
   }));
 
-export const emailEvents: EmailEvent[] = customers.flatMap((customer, index) => [
-  {
-    id: `email-${customer.id}-sent`,
-    customerId: customer.id,
-    campaignId: promotions[index % promotions.length].id,
-    eventType: "sent",
-    occurredAt: emailEventAtFor(index, 0),
-  },
-  {
-    id: `email-${customer.id}-opened`,
-    customerId: customer.id,
-    campaignId: promotions[index % promotions.length].id,
-    eventType: index % 11 === 0 ? "conversion" : index % 3 === 0 ? "clicked" : "opened",
-    occurredAt: emailEventAtFor(index, 1),
-  },
-]);
+export const emailEvents: EmailEvent[] = customers.flatMap((customer, index) => {
+  const campaign = promotions[index % promotions.length];
+
+  return [
+    {
+      id: `email-${customer.id}-sent`,
+      customerId: customer.id,
+      campaignId: campaign.id,
+      eventType: "sent",
+      occurredAt: emailEventAtFor(index, 0),
+    },
+    {
+      id: `email-${customer.id}-opened`,
+      customerId: customer.id,
+      campaignId: campaign.id,
+      eventType: "opened",
+      occurredAt: emailEventAtFor(index, 1),
+    },
+    {
+      id: `email-${customer.id}-engaged`,
+      customerId: customer.id,
+      campaignId: campaign.id,
+      eventType: index % 9 === 0 ? "conversion" : index % 3 === 0 ? "clicked" : "opened",
+      occurredAt: emailEventAtFor(index, 2),
+    },
+  ];
+});
 
 export const commerceData: CommerceData = {
   customers,
@@ -252,6 +324,18 @@ function postcodeFor(index: number): string {
 }
 
 function orderedAtFor(index: number): string {
+  if (index >= 220) {
+    const day = String(((index - 220) % 14) + 1).padStart(2, "0");
+
+    return `2026-12-${day}T${String(9 + (index % 10)).padStart(2, "0")}:15:00.000Z`;
+  }
+
+  if (index >= 120) {
+    const day = String(((index - 120) % 10) + 20).padStart(2, "0");
+
+    return `2026-11-${day}T${String(9 + (index % 10)).padStart(2, "0")}:15:00.000Z`;
+  }
+
   const day = String((index % 28) + 1).padStart(2, "0");
 
   return `2026-05-${day}T${String(9 + (index % 10)).padStart(2, "0")}:15:00.000Z`;
@@ -287,4 +371,12 @@ function orderItem(
 
 function money(value: number): number {
   return Math.round(value * 100) / 100;
+}
+
+function seasonalDiscount(index: number): number {
+  if (index >= 120) {
+    return index % 6 === 0 ? 0.15 : 0.12;
+  }
+
+  return 0.1;
 }

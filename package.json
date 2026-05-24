@@ -13,6 +13,7 @@
     "test": "vitest run",
     "coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "db:fixture": "node scripts/build-fixture-db.mjs",
     "deps:outdated": "npm outdated",
     "security:audit": "npm audit"
   },

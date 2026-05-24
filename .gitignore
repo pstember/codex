@@ -58,5 +58,8 @@ target/
 *.sqlite
 *.sqlite3
 *.db
+!fixtures/
+!fixtures/commerce.db
 .data/
 *.tsbuildinfo
+public/generated-assets/

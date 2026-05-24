@@ -2,15 +2,9 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { requireCurrentUser, sessionCookieName } from "@/app/auth/session";
+import { sessionCookieName, storefrontPreviewCookieName } from "@/app/auth/session";
 import { loginWithPassword } from "@/domain/auth";
 import { getAppDatabase } from "@/persistence/appDatabase";
-
-const routeByRole = {
-  manager: "/manager",
-  operator: "/operator",
-  guest: "/",
-} as const;
 
 export async function loginAction(formData: FormData) {
   const email = String(formData.get("email") ?? "");
@@ -30,7 +24,7 @@ export async function loginAction(formData: FormData) {
     maxAge: 60 * 60 * 8,
   });
 
-  redirect(routeByRole[user.role]);
+  redirect("/admin");
 }
 
 export async function logoutAction() {
@@ -42,23 +36,6 @@ export async function logoutAction() {
   }
 
   cookieStore.delete(sessionCookieName);
+  cookieStore.delete(storefrontPreviewCookieName);
   redirect("/");
-}
-
-export async function saveInsightAction() {
-  const user = await requireCurrentUser("ask_deep_metrics");
-
-  return {
-    ok: true,
-    savedBy: user.email,
-  };
-}
-
-export async function publishStorefrontAction() {
-  const user = await requireCurrentUser("publish_storefront");
-
-  return {
-    ok: true,
-    publishedBy: user.email,
-  };
 }

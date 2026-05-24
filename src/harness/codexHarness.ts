@@ -1,5 +1,3 @@
-import type { Campaign } from "@/domain/campaign";
-import { campaignSchema } from "@/domain/campaign";
 import {
   type GeneratedQuery,
   generatedQuerySchema,
@@ -7,9 +5,16 @@ import {
   insightSummarySchema,
 } from "@/domain/insight";
 import type { StorefrontConfig } from "@/domain/storefront";
-import { storefrontConfigSchema } from "@/domain/storefront";
+import {
+  defaultStorefrontHeroImageComposition,
+  maxProductsPerFeatureDrop,
+  storefrontConfigSchema,
+} from "@/domain/storefront";
 import { products as seededProducts } from "@/fixtures/products";
-import { runCodexAppServerJsonPrompt } from "@/harness/codexAppServerClient";
+import {
+  runCodexAppServerJsonPrompt,
+  runCodexAppServerJsonPromptWithTrace,
+} from "@/harness/codexAppServerClient";
 
 export type CodexHarnessMode = "static" | "fixture" | "cli" | "app-server";
 
@@ -17,11 +22,16 @@ export interface CodexHarness {
   readonly mode: CodexHarnessMode;
   generateGraphQLQuery(question: string): Promise<GeneratedQuery>;
   summarizeInsight(question: string): Promise<InsightSummary>;
-  generateCampaignProposal(input: {
-    insightTitle: string;
-    season: "fathers-day" | "secret-santa";
-  }): Promise<Campaign>;
-  generateStorefrontConfig(campaign: Campaign): Promise<StorefrontConfig>;
+  generateStorefrontAdaptation(input: {
+    eventName: string;
+    operatorPrompt: string;
+    sourceStorefront: StorefrontConfig;
+  }): Promise<StorefrontConfig>;
+  generateStorefrontAdaptationTrace(input: {
+    eventName: string;
+    operatorPrompt: string;
+    sourceStorefront: StorefrontConfig;
+  }): Promise<CodexGenerationTrace<StorefrontConfig>>;
 }
 
 export type CodexAppServerJsonRunner = <T>(input: {
@@ -29,6 +39,21 @@ export type CodexAppServerJsonRunner = <T>(input: {
   schemaName: string;
   jsonSchema: Record<string, unknown>;
 }) => Promise<T>;
+
+export type CodexGenerationTrace<T> = {
+  harnessMode: CodexHarnessMode;
+  prompt: string;
+  requestPayload?: string;
+  rawResponse: string;
+  schemaName: string;
+  value: T;
+};
+
+export type CodexAppServerJsonTraceRunner = <T>(input: {
+  prompt: string;
+  schemaName: string;
+  jsonSchema: Record<string, unknown>;
+}) => Promise<CodexGenerationTrace<T>>;
 
 const fatherDayQuery: GeneratedQuery = {
   question: "What should we promote for Father’s Day based on margin, inventory, and conversion?",
@@ -170,69 +195,115 @@ export const staticCommerceHarness: CodexHarness = {
         .map((product) => `${product.name} is excluded by margin, stock, or return-rate risk.`),
     };
   },
-  async generateCampaignProposal(input) {
-    const selectedProducts =
-      input.season === "secret-santa" ? selectSecretSantaProducts() : selectFatherDayProducts();
+  async generateStorefrontAdaptation(input) {
+    const eventSlug = slugify(input.eventName);
+    const isHalloween = eventSlug.includes("halloween");
+    const isValentine = eventSlug.includes("valentine");
+    const palette = isHalloween
+      ? {
+          background: "#12091f",
+          surface: "#fff7ed",
+          text: "#f8fafc",
+          muted: "#fde7c8",
+          border: "#f97316",
+          accent: "#f97316",
+          secondaryAccent: "#a3e635",
+          button: "#f97316",
+          buttonText: "#12091f",
+        }
+      : isValentine
+        ? {
+            background: "#fff1f2",
+            surface: "#ffffff",
+            text: "#3b0712",
+            muted: "#7f1d1d",
+            border: "#fb7185",
+            accent: "#e11d48",
+            secondaryAccent: "#f59e0b",
+            button: "#e11d48",
+            buttonText: "#ffffff",
+          }
+        : {
+            background: "#eef5ff",
+            surface: "#ffffff",
+            text: "#0b1020",
+            muted: "#42526e",
+            border: "#93c5fd",
+            accent: "#2563eb",
+            secondaryAccent: "#22d3ee",
+            button: "#2563eb",
+            buttonText: "#ffffff",
+          };
+    const productIds = selectSecretSantaProducts()
+      .slice(0, maxProductsPerFeatureDrop)
+      .map((product) => product.id);
+    const heroTitle = isHalloween
+      ? "Halloween gifts with a useful little shiver."
+      : isValentine
+        ? "Valentine’s Day gifts with real everyday charm."
+        : `${input.eventName} gifts, styled for the moment.`;
 
     return {
-      id: input.season === "secret-santa" ? "secret-santa-2026" : "fathers-day-2026",
-      name:
-        input.season === "secret-santa"
-          ? "Secret Santa Gifts That Work Hard"
-          : "Father’s Day Picks From Live Catalog Signals",
-      season: input.season,
-      summary: `${selectedProducts.length} products selected from current catalog metrics for ${input.insightTitle}.`,
-      audience:
-        input.season === "secret-santa"
-          ? "Gift buyers shopping useful under-£50 products."
-          : "Gift buyers shopping practical Father’s Day products.",
-      productIds: selectedProducts.map((product) => product.id),
-      expectedImpact:
-        "Improve campaign quality by ranking live margin, inventory, conversion, and risk data.",
-      storefrontAngle:
-        input.season === "secret-santa"
-          ? "Lead with affordable, giftable products that are healthy in stock."
-          : "Lead with practical gifts that have enough stock and commercial strength.",
-    };
-  },
-  async generateStorefrontConfig(campaign) {
-    const isSecretSanta = campaign.season === "secret-santa";
-    const heroProducts = campaign.productIds.slice(0, 2);
-
-    return {
-      id: `${campaign.id}-storefront`,
-      campaignId: campaign.id,
-      versionName: isSecretSanta ? "Secret Santa" : "Father’s Day",
+      id: `event-${eventSlug}-storefront`,
+      campaignId: `event-${eventSlug}`,
+      versionName: input.eventName,
       style: {
-        theme: isSecretSanta ? "holiday" : "summer",
-        accentColor: isSecretSanta ? "#be123c" : "#b45309",
-        density: isSecretSanta ? "compact" : "editorial",
+        theme: eventSlug,
+        accentColor: palette.accent,
+        density: "editorial",
+        palette,
       },
       visualAsset: {
-        id: `${campaign.id}-hero-asset`,
-        campaignId: campaign.id,
-        prompt: `${campaign.name} hero visual generated from approved product data.`,
-        alt: `${campaign.name} hero visual for Atlas & Co.`,
+        id: `event-${eventSlug}-placeholder`,
+        campaignId: `event-${eventSlug}`,
+        prompt: input.operatorPrompt,
+        alt: `${input.eventName} hero visual for Atlas & Co.`,
         source: "static",
-        path: isSecretSanta
-          ? "/static-assets/secret-santa-hero.svg"
-          : "/static-assets/fathers-day-hero.svg",
+        path: "/static-assets/generated-event-hero.svg",
+        composition: defaultStorefrontHeroImageComposition,
       },
       sections: [
         {
-          id: `${campaign.id}-hero`,
+          id: `event-${eventSlug}-hero`,
           type: "hero",
-          title: campaign.storefrontAngle,
-          body: campaign.summary,
-          productIds: heroProducts,
+          sectionIntent: "heroProduct",
+          title: heroTitle,
+          body: `A timely Atlas & Co. edit with useful gifts, strong stock, and copy adapted for ${input.eventName}.`,
+          productIds: productIds.slice(0, 1),
         },
         {
-          id: `${campaign.id}-rail`,
+          id: `event-${eventSlug}-offer`,
           type: "productRail",
-          title: isSecretSanta ? "Live picks under £50" : "Live Father’s Day picks",
-          productIds: campaign.productIds,
+          sectionIntent: "currentOffer",
+          title: "Current offer: event-ready picks",
+          body: "Selected from products with practical gift appeal and healthy inventory.",
+          productIds,
+        },
+        {
+          id: `event-${eventSlug}-spotlight`,
+          type: "featuredCollection",
+          sectionIntent: "spotlight",
+          title: "Spotlight: useful gift of the moment",
+          body: "A lead product is singled out for richer presentation while the offer stays active.",
+          productIds: productIds.slice(0, 1),
         },
       ],
+    };
+  },
+  async generateStorefrontAdaptationTrace(input) {
+    const value = await this.generateStorefrontAdaptation(input);
+
+    return {
+      harnessMode: this.mode,
+      prompt: input.operatorPrompt,
+      requestPayload: JSON.stringify({
+        harnessMode: this.mode,
+        prompt: input.operatorPrompt,
+        schemaName: "StorefrontConfig",
+      }),
+      rawResponse: JSON.stringify(value),
+      schemaName: "StorefrontConfig",
+      value,
     };
   },
 };
@@ -245,16 +316,42 @@ export const cliCodexHarness: CodexHarness = {
   async summarizeInsight(question) {
     return staticCommerceHarness.summarizeInsight(question);
   },
-  async generateCampaignProposal(input) {
-    return staticCommerceHarness.generateCampaignProposal(input);
+  async generateStorefrontAdaptation(input) {
+    return staticCommerceHarness.generateStorefrontAdaptation(input);
   },
-  async generateStorefrontConfig(campaign) {
-    return staticCommerceHarness.generateStorefrontConfig(campaign);
+  async generateStorefrontAdaptationTrace(input) {
+    const value = await this.generateStorefrontAdaptation(input);
+
+    return {
+      harnessMode: this.mode,
+      prompt: input.operatorPrompt,
+      requestPayload: JSON.stringify({
+        harnessMode: this.mode,
+        prompt: input.operatorPrompt,
+        schemaName: "StorefrontConfig",
+      }),
+      rawResponse: JSON.stringify(value),
+      schemaName: "StorefrontConfig",
+      value,
+    };
   },
 };
 
 export function createAppServerCodexHarness(
   runJsonPrompt: CodexAppServerJsonRunner = runCodexAppServerJsonPrompt,
+  runJsonPromptWithTrace: CodexAppServerJsonTraceRunner = async <T>(input: {
+    prompt: string;
+    schemaName: string;
+    jsonSchema: Record<string, unknown>;
+  }) => {
+    const result = await runCodexAppServerJsonPromptWithTrace<T>(input);
+
+    return {
+      harnessMode: "app-server",
+      ...result,
+      requestPayload: result.requestPayload ?? formatCodexRequestPayload(input),
+    };
+  },
 ): CodexHarness {
   return {
     mode: "app-server",
@@ -288,48 +385,81 @@ export function createAppServerCodexHarness(
 
       return insightSummarySchema.parse(result);
     },
-    async generateCampaignProposal(input) {
-      const result = await runJsonPrompt<Campaign>({
-        prompt: [
-          "Generate an Atlas & Co. campaign proposal for the Store Operator workflow.",
-          `Insight title: ${input.insightTitle}`,
-          `Required season: ${input.season}`,
-          "Use only product ids from the seeded catalog.",
-          `Seeded product ids: ${seededProductIds.join(", ")}`,
-          "Return JSON only.",
-        ].join("\n"),
-        schemaName: "Campaign",
-        jsonSchema: campaignJsonSchema,
-      });
+    async generateStorefrontAdaptation(input) {
+      const trace = await this.generateStorefrontAdaptationTrace(input);
 
-      return campaignSchema.parse(result);
+      return trace.value;
     },
-    async generateStorefrontConfig(campaign) {
-      const result = await runJsonPrompt<StorefrontConfig>({
-        prompt: [
-          "Generate a validated storefront config for Atlas & Co.",
-          `Campaign JSON: ${JSON.stringify(campaign)}`,
-          "Use only approved section types and product ids from the campaign.",
-          "visualAsset.path must point at an existing /static-assets/ hero image path.",
-          "Return JSON only.",
-        ].join("\n"),
+    async generateStorefrontAdaptationTrace(input) {
+      const trace = await runJsonPromptWithTrace<StorefrontConfig>({
+        prompt: buildStorefrontAdaptationPrompt(input),
         schemaName: "StorefrontConfig",
         jsonSchema: storefrontConfigJsonSchema,
       });
 
-      return storefrontConfigSchema.parse(result);
+      return {
+        ...trace,
+        requestPayload:
+          trace.requestPayload ||
+          formatCodexRequestPayload({
+            prompt: buildStorefrontAdaptationPrompt(input),
+            schemaName: "StorefrontConfig",
+            jsonSchema: storefrontConfigJsonSchema,
+          }),
+        value: storefrontConfigSchema.parse(trace.value),
+      };
     },
   };
+}
+
+function formatCodexRequestPayload(input: {
+  prompt: string;
+  schemaName: string;
+  jsonSchema: Record<string, unknown>;
+}): string {
+  return JSON.stringify(
+    {
+      schemaName: input.schemaName,
+      prompt: input.prompt,
+      outputSchema: input.jsonSchema,
+    },
+    null,
+    2,
+  );
+}
+
+function buildStorefrontAdaptationPrompt(input: {
+  eventName: string;
+  operatorPrompt: string;
+  sourceStorefront: StorefrontConfig;
+}) {
+  return [
+    "Generate an Atlas & Co. storefront visual adaptation.",
+    `Event: ${input.eventName}`,
+    `Operator request: ${input.operatorPrompt}`,
+    `Source storefront JSON: ${JSON.stringify(input.sourceStorefront)}`,
+    "Rewrite visitor-facing copy for the event, choose a complete color palette, and keep product ids valid.",
+    "Generate exact sections in order: Hero product, Current offer, Spotlight.",
+    "Set sectionIntent values to heroProduct, currentOffer, and spotlight in that order.",
+    "Hero product leads with the main promise and one primary product.",
+    "Current offer explains the active campaign or promotion.",
+    "Spotlight gives one selected product richer emphasis.",
+    `No more than ${maxProductsPerFeatureDrop} products per storefront section.`,
+    `Allowed product ids: ${seededProductIds.join(", ")}`,
+    "visualAsset.path must point at an existing /static-assets/ path; image generation will replace it after validation.",
+    "visualAsset.composition must target the storefrontHeroWide slot with a 14 / 9 crop, a protected left copy zone, and a right-weighted product focal point.",
+    "Return JSON only.",
+  ].join("\n");
 }
 
 export const appServerCodexHarness: CodexHarness = createAppServerCodexHarness();
 
 export function getCodexHarness(): CodexHarness {
-  return isCodexAppServerMode() ? appServerCodexHarness : staticCommerceHarness;
+  return appServerCodexHarness;
 }
 
 export function isCodexAppServerMode(): boolean {
-  return process.env.CODEX_HARNESS_MODE === "app-server";
+  return true;
 }
 
 function selectProductsForQuestion(question: string) {
@@ -508,35 +638,6 @@ const insightSummaryJsonSchema = {
   },
 };
 
-const campaignJsonSchema = {
-  type: "object",
-  additionalProperties: false,
-  required: [
-    "id",
-    "name",
-    "season",
-    "summary",
-    "audience",
-    "productIds",
-    "expectedImpact",
-    "storefrontAngle",
-  ],
-  properties: {
-    id: { type: "string" },
-    name: { type: "string" },
-    season: { type: "string", enum: ["fathers-day", "secret-santa"] },
-    summary: { type: "string" },
-    audience: { type: "string" },
-    productIds: {
-      type: "array",
-      minItems: 1,
-      items: { type: "string", enum: seededProductIds },
-    },
-    expectedImpact: { type: "string" },
-    storefrontAngle: { type: "string" },
-  },
-};
-
 const storefrontConfigJsonSchema = {
   type: "object",
   additionalProperties: false,
@@ -548,33 +649,78 @@ const storefrontConfigJsonSchema = {
     style: {
       type: "object",
       additionalProperties: false,
-      required: ["theme", "accentColor", "density"],
+      required: ["theme", "accentColor", "density", "palette"],
       properties: {
-        theme: { type: "string", enum: ["heritage", "summer", "holiday"] },
+        theme: { type: "string" },
         accentColor: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
         density: { type: "string", enum: ["compact", "comfortable", "editorial"] },
+        palette: {
+          type: "object",
+          additionalProperties: false,
+          required: [
+            "background",
+            "surface",
+            "text",
+            "muted",
+            "border",
+            "accent",
+            "secondaryAccent",
+            "button",
+            "buttonText",
+          ],
+          properties: {
+            background: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
+            surface: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
+            text: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
+            muted: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
+            border: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
+            accent: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
+            secondaryAccent: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
+            button: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
+            buttonText: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
+          },
+        },
       },
     },
     visualAsset: {
       type: "object",
       additionalProperties: false,
-      required: ["id", "campaignId", "prompt", "alt", "source", "path"],
+      required: ["id", "campaignId", "prompt", "alt", "source", "path", "composition"],
       properties: {
         id: { type: "string" },
         campaignId: { type: "string" },
         prompt: { type: "string" },
         alt: { type: "string" },
         source: { type: "string", enum: ["static", "generated"] },
-        path: { type: "string", pattern: "^/static-assets/" },
+        path: { type: "string", pattern: "^/(static-assets|generated-assets)/" },
+        composition: {
+          type: "object",
+          additionalProperties: false,
+          required: ["slot", "aspectRatio", "focalPoint", "safeArea", "objectPosition"],
+          properties: {
+            slot: { type: "string", enum: ["storefrontHeroWide"] },
+            aspectRatio: { type: "string", enum: ["14 / 9"] },
+            focalPoint: {
+              type: "string",
+              enum: ["center", "right-center", "lower-right"],
+            },
+            safeArea: {
+              type: "string",
+              enum: ["copy-left-third", "copy-left-half"],
+            },
+            objectPosition: { type: "string" },
+          },
+        },
       },
     },
     sections: {
       type: "array",
-      minItems: 1,
+      minItems: 3,
+      maxItems: 3,
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["id", "type", "title", "productIds"],
+        required: ["id", "type", "sectionIntent", "title", "body", "productIds"],
         properties: {
           id: { type: "string" },
           type: {
@@ -590,10 +736,15 @@ const storefrontConfigJsonSchema = {
               "featuredCollection",
             ],
           },
+          sectionIntent: {
+            type: "string",
+            enum: ["heroProduct", "currentOffer", "spotlight"],
+          },
           title: { type: "string" },
-          body: { type: "string" },
+          body: { type: ["string", "null"] },
           productIds: {
             type: "array",
+            maxItems: maxProductsPerFeatureDrop,
             items: { type: "string" },
           },
         },
@@ -601,3 +752,10 @@ const storefrontConfigJsonSchema = {
     },
   },
 };
+
+function slugify(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}

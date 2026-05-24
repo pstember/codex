@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { campaignSchema } from "@/domain/campaign";
 import { generatedQuerySchema, insightSummarySchema } from "@/domain/insight";
 import { storefrontConfigSchema } from "@/domain/storefront";
 import {
   type CodexAppServerJsonRunner,
+  type CodexAppServerJsonTraceRunner,
   cliCodexHarness,
   createAppServerCodexHarness,
   getCodexHarness,
@@ -11,39 +11,8 @@ import {
 } from "@/harness/codexHarness";
 import { fixtureCodexHarness } from "./support/fixtureCodexHarness";
 
-describe("fixture Codex harness", () => {
-  it("generates a valid Father’s Day GraphQL query fixture", async () => {
-    const result = await fixtureCodexHarness.generateGraphQLQuery(
-      "What should we promote for Father’s Day based on margin, inventory, and conversion?",
-    );
-
-    expect(generatedQuerySchema.parse(result).operationName).toBe("FatherDayPromotionCandidates");
-    expect(result.query).toContain("products");
-    expect(result.recommendedChart).toBe("productTable");
-  });
-
-  it("summarizes Father’s Day insight with expected risk exclusions", async () => {
-    const result = await fixtureCodexHarness.summarizeInsight("Father’s Day");
-
-    expect(insightSummarySchema.parse(result).recommendedProductIds).toContain(
-      "portable-charcoal-grill",
-    );
-    expect(result.risks.join(" ")).toContain("espresso machine");
-  });
-
-  it("generates a valid Secret Santa campaign and storefront config", async () => {
-    const campaign = await fixtureCodexHarness.generateCampaignProposal({
-      insightTitle: "Revamp Father’s Day",
-      season: "secret-santa",
-    });
-    const storefront = await fixtureCodexHarness.generateStorefrontConfig(campaign);
-
-    expect(campaignSchema.parse(campaign).season).toBe("secret-santa");
-    expect(campaign.productIds.every((productId) => productId !== "espresso-machine")).toBe(true);
-    expect(storefrontConfigSchema.parse(storefront).style.theme).toBe("holiday");
-  });
-
-  it("generates query and insight fixtures for the approved Manager metric questions", async () => {
+describe("Codex harness", () => {
+  it("returns valid query and insight fixtures for approved manager questions", async () => {
     const query = await fixtureCodexHarness.generateGraphQLQuery(
       "Which products have high inventory but are underexposed on the storefront?",
     );
@@ -59,133 +28,289 @@ describe("fixture Codex harness", () => {
     );
   });
 
-  it("summarizes Secret Santa insight when asked directly", async () => {
-    const insight = await fixtureCodexHarness.summarizeInsight(
-      "Turn the Father’s Day campaign into a Secret Santa campaign under £50.",
-    );
-
-    expect(insightSummarySchema.parse(insight).recommendedProductIds).toContain(
-      "pour-over-coffee-set",
-    );
-  });
-
-  it("generates a Secret Santa query fixture when the question asks for the seasonal revamp", async () => {
-    const result = await fixtureCodexHarness.generateGraphQLQuery(
-      "Turn the Father’s Day campaign into a Secret Santa campaign under £50.",
-    );
-
-    expect(generatedQuerySchema.parse(result).operationName).toBe("SecretSantaCandidates");
-    expect(result.query).toContain("maxPrice: 50");
-  });
-
-  it("routes the CLI harness through static catalog derivation for now", async () => {
-    const campaign = await cliCodexHarness.generateCampaignProposal({
-      insightTitle: "Father’s Day",
-      season: "fathers-day",
+  it("derives adaptation drafts from the static and CLI harnesses", async () => {
+    const staticDraft = await staticCommerceHarness.generateStorefrontAdaptation({
+      eventName: "World Cup",
+      operatorPrompt: "Make it feel match-day ready.",
+      sourceStorefront: await fixtureCodexHarness.generateStorefrontAdaptation({
+        eventName: "Baseline",
+        operatorPrompt: "Keep it bright.",
+        sourceStorefront: await fixtureCodexHarness.generateStorefrontAdaptation({
+          eventName: "Seed",
+          operatorPrompt: "Seed prompt.",
+          sourceStorefront: {
+            id: "baseline",
+            campaignId: "evergreen",
+            versionName: "Baseline",
+            style: {
+              theme: "basic",
+              accentColor: "#2563eb",
+              density: "comfortable",
+              palette: {
+                background: "#f9fbff",
+                surface: "#ffffff",
+                text: "#0b1020",
+                muted: "#42526e",
+                border: "#c7d7ff",
+                accent: "#2563eb",
+                secondaryAccent: "#22d3ee",
+                button: "#0b1020",
+                buttonText: "#ffffff",
+              },
+            },
+            visualAsset: {
+              id: "evergreen-hero-asset",
+              campaignId: "evergreen",
+              prompt: "Baseline prompt.",
+              alt: "Baseline hero.",
+              source: "static",
+              path: "/static-assets/basic-hero.svg",
+              composition: {
+                slot: "storefrontHeroWide",
+                aspectRatio: "14 / 9",
+                focalPoint: "right-center",
+                safeArea: "copy-left-half",
+                objectPosition: "72% center",
+              },
+            },
+            sections: [
+              {
+                id: "baseline-hero",
+                type: "hero",
+                sectionIntent: "heroProduct",
+                title: "Baseline",
+                body: "Baseline",
+                productIds: ["pour-over-coffee-set"],
+              },
+              {
+                id: "baseline-offer",
+                type: "productRail",
+                sectionIntent: "currentOffer",
+                title: "Offer",
+                body: "Offer body",
+                productIds: ["wireless-charging-valet"],
+              },
+              {
+                id: "baseline-spotlight",
+                type: "featuredCollection",
+                sectionIntent: "spotlight",
+                title: "Spotlight",
+                body: "Spotlight body",
+                productIds: ["desk-organizer-tray"],
+              },
+            ],
+          },
+        }),
+      }),
     });
-    const storefront = await cliCodexHarness.generateStorefrontConfig(campaign);
-    const query = await cliCodexHarness.generateGraphQLQuery("Father’s Day");
-    const insight = await cliCodexHarness.summarizeInsight("Father’s Day");
-
-    expect(cliCodexHarness.mode).toBe("cli");
-    expect(campaignSchema.parse(campaign).season).toBe("fathers-day");
-    expect(storefrontConfigSchema.parse(storefront).style.theme).toBe("summer");
-    expect(generatedQuerySchema.parse(query).operationName).toBe("FatherDayPromotionCandidates");
-    expect(insightSummarySchema.parse(insight).recommendedProductIds.length).toBeGreaterThan(0);
-  });
-
-  it("derives runtime fallback outputs from static catalog data instead of generated fixtures", async () => {
-    const underFiftyQuery = await staticCommerceHarness.generateGraphQLQuery(
-      "Which under £50 products have enough inventory?",
-    );
-    const riskInsight = await staticCommerceHarness.summarizeInsight(
-      "Which products should we avoid because of risk?",
-    );
-    const mobileInsight = await staticCommerceHarness.summarizeInsight(
-      "Why did mobile conversion drop last week?",
-    );
-    const exposureInsight = await staticCommerceHarness.summarizeInsight(
-      "Which products have high inventory but are underexposed?",
-    );
-    const campaign = await staticCommerceHarness.generateCampaignProposal({
-      insightTitle: exposureInsight.title,
-      season: "secret-santa",
+    const cliDraft = await cliCodexHarness.generateStorefrontAdaptation({
+      eventName: "Halloween",
+      operatorPrompt: "Make it eerie and useful.",
+      sourceStorefront: staticDraft,
     });
-    const storefront = await staticCommerceHarness.generateStorefrontConfig(campaign);
 
     expect(staticCommerceHarness.mode).toBe("static");
-    expect(underFiftyQuery.query).toContain("maxPrice: 50");
-    expect(riskInsight.recommendedProductIds).toContain("espresso-machine");
-    expect(mobileInsight.recommendedProductIds).toContain("espresso-machine");
-    expect(exposureInsight.recommendedProductIds).toContain("desk-organizer-tray");
-    expect(campaign.productIds.every((productId) => productId !== "espresso-machine")).toBe(true);
-    expect(storefront.campaignId).toBe(campaign.id);
+    expect(cliCodexHarness.mode).toBe("cli");
+    expect(storefrontConfigSchema.parse(staticDraft).versionName).toBe("World Cup");
+    expect(storefrontConfigSchema.parse(cliDraft).versionName).toBe("Halloween");
   });
 
-  it("routes the App Server harness through a JSON prompt runner and validates outputs", async () => {
+  it("routes app-server storefront adaptation through JSON schema validation", async () => {
     const requestedSchemas: string[] = [];
+    const requestedJsonSchemas: Record<string, Record<string, unknown>> = {};
+    const requestedPrompts: Record<string, string> = {};
+
     const fakeJsonRunner: CodexAppServerJsonRunner = async <T>(input: {
       prompt: string;
       schemaName: string;
       jsonSchema: Record<string, unknown>;
     }) => {
-      const { schemaName } = input;
-      requestedSchemas.push(schemaName);
-      let result: unknown;
+      requestedSchemas.push(input.schemaName);
+      requestedJsonSchemas[input.schemaName] = input.jsonSchema;
+      requestedPrompts[input.schemaName] = input.prompt;
+      return (await fixtureCodexHarness.generateStorefrontAdaptation({
+        eventName: "World Cup",
+        operatorPrompt: "Make it match-day ready.",
+        sourceStorefront: await fixtureCodexHarness.generateStorefrontAdaptation({
+          eventName: "Baseline",
+          operatorPrompt: "Keep it bright.",
+          sourceStorefront: {} as never,
+        }),
+      })) as T;
+    };
 
-      if (schemaName === "GeneratedQuery") {
-        result = await fixtureCodexHarness.generateGraphQLQuery("Father’s Day");
-        return result as T;
+    const fakeTraceRunner: CodexAppServerJsonTraceRunner = async <T>(input: {
+      prompt: string;
+      schemaName: string;
+      jsonSchema: Record<string, unknown>;
+    }) => {
+      requestedSchemas.push(input.schemaName);
+      requestedJsonSchemas[input.schemaName] = input.jsonSchema;
+      requestedPrompts[input.schemaName] = input.prompt;
+
+      return {
+        harnessMode: "app-server",
+        prompt: input.prompt,
+        rawResponse: JSON.stringify(
+          await fixtureCodexHarness.generateStorefrontAdaptation({
+            eventName: "World Cup",
+            operatorPrompt: "Make it match-day ready.",
+            sourceStorefront: {} as never,
+          }),
+        ),
+        schemaName: input.schemaName,
+        value: (await fixtureCodexHarness.generateStorefrontAdaptation({
+          eventName: "World Cup",
+          operatorPrompt: "Make it match-day ready.",
+          sourceStorefront: {} as never,
+        })) as T,
+      };
+    };
+
+    const appServerHarness = createAppServerCodexHarness(fakeJsonRunner, fakeTraceRunner);
+    const draft = await appServerHarness.generateStorefrontAdaptation({
+      eventName: "World Cup",
+      operatorPrompt: "Make it match-day ready.",
+      sourceStorefront: {} as never,
+    });
+
+    expect(appServerHarness.mode).toBe("app-server");
+    expect(storefrontConfigSchema.parse(draft).versionName).toBe("World Cup");
+    expect(requestedSchemas).toEqual(["StorefrontConfig"]);
+    expect(requestedPrompts.StorefrontConfig).toContain("World Cup");
+    expect(requestedPrompts.StorefrontConfig).toContain(
+      "exact sections in order: Hero product, Current offer, Spotlight",
+    );
+    expectSchemaRequiredProperties(requestedJsonSchemas.StorefrontConfig);
+  });
+
+  it("routes app-server query and insight generation through compatible JSON schemas", async () => {
+    const requestedJsonSchemas: Record<string, Record<string, unknown>> = {};
+    const requestedPrompts: Record<string, string> = {};
+    const fakeJsonRunner: CodexAppServerJsonRunner = async <T>(input: {
+      prompt: string;
+      schemaName: string;
+      jsonSchema: Record<string, unknown>;
+    }) => {
+      requestedJsonSchemas[input.schemaName] = input.jsonSchema;
+      requestedPrompts[input.schemaName] = input.prompt;
+
+      if (input.schemaName === "GeneratedQuery") {
+        return {
+          question: "Which under £50 products should I feature?",
+          operationName: "UnderFiftyProductCandidates",
+          query: `query UnderFiftyProductCandidates {
+  products(filter: { maxPrice: 50 }) {
+    id
+    name
+  }
+}`,
+          rationale: "Fetch under-£50 product candidates.",
+          recommendedChart: "productTable",
+        } as T;
       }
 
-      if (schemaName === "InsightSummary") {
-        result = await fixtureCodexHarness.summarizeInsight("Father’s Day");
-        return result as T;
-      }
-
-      if (schemaName === "Campaign") {
-        result = await fixtureCodexHarness.generateCampaignProposal({
-          insightTitle: "Father’s Day",
-          season: "fathers-day",
-        });
-        return result as T;
-      }
-
-      result = await fixtureCodexHarness.generateStorefrontConfig(fatherCampaignFixture());
-      return result as T;
+      return {
+        title: "Desk Organizer Tray is the strongest underexposed pick.",
+        summary: "It has enough stock and margin to merit more storefront exposure.",
+        recommendedProductIds: ["desk-organizer-tray"],
+        risks: [],
+      } as T;
     };
     const appServerHarness = createAppServerCodexHarness(fakeJsonRunner);
 
-    const query = await appServerHarness.generateGraphQLQuery("Father’s Day");
-    const insight = await appServerHarness.summarizeInsight("Father’s Day");
-    const campaign = await appServerHarness.generateCampaignProposal({
-      insightTitle: "Father’s Day",
-      season: "fathers-day",
-    });
-    const storefront = await appServerHarness.generateStorefrontConfig(campaign);
-
-    expect(appServerHarness.mode).toBe("app-server");
-    expect(generatedQuerySchema.parse(query).operationName).toBe("FatherDayPromotionCandidates");
-    expect(insightSummarySchema.parse(insight).recommendedProductIds).toContain(
-      "portable-charcoal-grill",
+    const query = await appServerHarness.generateGraphQLQuery(
+      "Which under £50 products should I feature?",
     );
-    expect(campaignSchema.parse(campaign).season).toBe("fathers-day");
-    expect(storefrontConfigSchema.parse(storefront).campaignId).toBe("fathers-day-2026");
-    expect(requestedSchemas).toEqual([
-      "GeneratedQuery",
-      "InsightSummary",
-      "Campaign",
-      "StorefrontConfig",
-    ]);
+    const insight = await appServerHarness.summarizeInsight(
+      "Which products have high inventory but are underexposed on the storefront?",
+    );
+
+    expect(query.operationName).toBe("UnderFiftyProductCandidates");
+    expect(insight.recommendedProductIds).toEqual(["desk-organizer-tray"]);
+    expect(requestedPrompts.GeneratedQuery).toContain("Which under £50 products should I feature?");
+    expect(requestedPrompts.InsightSummary).toContain("Seeded product ids:");
+    expectSchemaRequiredProperties(requestedJsonSchemas.GeneratedQuery);
+    expectSchemaRequiredProperties(requestedJsonSchemas.InsightSummary);
   });
 
-  it("selects static data mode by default and App Server mode only when explicitly configured", () => {
+  it("derives static Codex generation outputs across supported question branches", async () => {
+    const underFiftyQuery = await staticCommerceHarness.generateGraphQLQuery(
+      "Which under £50 products have the best margin?",
+    );
+    const knownQuery = await staticCommerceHarness.generateGraphQLQuery(
+      "Which products should we avoid promoting because of low margin, low stock, or high returns?",
+    );
+    const defaultQuery =
+      await staticCommerceHarness.generateGraphQLQuery("What should we feature?");
+
+    const underFiftyInsight = await staticCommerceHarness.summarizeInsight(
+      "Which under £50 products have the best margin?",
+    );
+    const riskInsight = await staticCommerceHarness.summarizeInsight(
+      "Which products should we avoid promoting because of low margin, low stock, or high returns?",
+    );
+    const mobileInsight = await staticCommerceHarness.summarizeInsight(
+      "Why did mobile conversion drop last week?",
+    );
+    const underexposedInsight = await staticCommerceHarness.summarizeInsight(
+      "Which products have high inventory but are underexposed on the storefront?",
+    );
+    const defaultInsight = await staticCommerceHarness.summarizeInsight("What should we feature?");
+
+    expect(underFiftyQuery.operationName).toBe("UnderFiftyProductCandidates");
+    expect(knownQuery.operationName).toBe("PromotionRiskExclusions");
+    expect(defaultQuery.operationName).toBe("FatherDayPromotionCandidates");
+    expect(underFiftyInsight.recommendedProductIds.length).toBeGreaterThan(0);
+    expect(riskInsight.recommendedProductIds.length).toBeGreaterThan(0);
+    expect(mobileInsight.recommendedProductIds.length).toBeGreaterThan(0);
+    expect(underexposedInsight.recommendedProductIds.length).toBeGreaterThan(0);
+    expect(defaultInsight.recommendedProductIds.length).toBeGreaterThan(0);
+  });
+
+  it("exposes traced adaptation metadata in app-server mode", async () => {
+    const rawResponse = JSON.stringify(
+      await fixtureCodexHarness.generateStorefrontAdaptation({
+        eventName: "World Cup",
+        operatorPrompt: "Make it match-day ready.",
+        sourceStorefront: {} as never,
+      }),
+    );
+    const fakeTraceRunner: CodexAppServerJsonTraceRunner = async <T>(input: {
+      prompt: string;
+      schemaName: string;
+      jsonSchema: Record<string, unknown>;
+    }) => ({
+      harnessMode: "app-server",
+      prompt: input.prompt,
+      rawResponse,
+      schemaName: input.schemaName,
+      value: JSON.parse(rawResponse) as T,
+    });
+    const appServerHarness = createAppServerCodexHarness(undefined, fakeTraceRunner);
+
+    const trace = await appServerHarness.generateStorefrontAdaptationTrace({
+      eventName: "World Cup",
+      operatorPrompt: "Make it match-day ready.",
+      sourceStorefront: {} as never,
+    });
+
+    expect(trace.harnessMode).toBe("app-server");
+    expect(trace.schemaName).toBe("StorefrontConfig");
+    expect(trace.prompt).toContain("World Cup");
+    expect(trace.requestPayload).toContain('"schemaName": "StorefrontConfig"');
+    expect(trace.requestPayload).toContain('"outputSchema"');
+    expect(trace.requestPayload).toContain('"objectPosition"');
+    expect(trace.rawResponse).toContain("event-world-cup");
+  });
+
+  it("uses app-server mode as the product harness default", () => {
     const originalMode = process.env.CODEX_HARNESS_MODE;
 
     delete process.env.CODEX_HARNESS_MODE;
-    expect(getCodexHarness().mode).toBe("static");
+    expect(getCodexHarness().mode).toBe("app-server");
 
-    process.env.CODEX_HARNESS_MODE = "app-server";
+    process.env.CODEX_HARNESS_MODE = "static";
     expect(getCodexHarness().mode).toBe("app-server");
 
     if (originalMode === undefined) {
@@ -196,15 +321,24 @@ describe("fixture Codex harness", () => {
   });
 });
 
-function fatherCampaignFixture() {
-  return {
-    id: "fathers-day-2026",
-    name: "Grill, Travel, and Everyday Carry",
-    season: "fathers-day" as const,
-    summary: "A fixture campaign.",
-    audience: "Father’s Day shoppers.",
-    productIds: ["portable-charcoal-grill"],
-    expectedImpact: "Expected lift.",
-    storefrontAngle: "Useful gifts.",
-  };
+function expectSchemaRequiredProperties(schema: Record<string, unknown>, path = "schema"): void {
+  if (schema.additionalProperties === false && isRecord(schema.properties)) {
+    expect(schema.required, `${path}.required`).toEqual(Object.keys(schema.properties));
+  }
+
+  if (isRecord(schema.properties)) {
+    for (const [propertyName, propertySchema] of Object.entries(schema.properties)) {
+      if (isRecord(propertySchema)) {
+        expectSchemaRequiredProperties(propertySchema, `${path}.properties.${propertyName}`);
+      }
+    }
+  }
+
+  if (isRecord(schema.items)) {
+    expectSchemaRequiredProperties(schema.items, `${path}.items`);
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

@@ -3,6 +3,7 @@ import type { User } from "@/domain/users";
 
 export const demoStaffPasswords = {
   manager: "manager-demo-pass",
+  analyst: "analyst-demo-pass",
   operator: "operator-demo-pass",
 } as const;
 
@@ -13,6 +14,13 @@ export const demoUsers: User[] = [
     name: "Mara Chen",
     role: "manager",
     passwordHash: hashStaffPassword(demoStaffPasswords.manager, "demo-manager-salt"),
+  },
+  {
+    id: "demo-analyst",
+    email: "analyst@demo.com",
+    name: "Ari Singh",
+    role: "analyst",
+    passwordHash: hashStaffPassword(demoStaffPasswords.analyst, "demo-analyst-salt"),
   },
   {
     id: "demo-operator",

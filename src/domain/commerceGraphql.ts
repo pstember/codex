@@ -1,5 +1,13 @@
 import { buildSchema, graphql, parse, validate } from "graphql";
-import type { CommerceCustomer, CommerceData, CommerceOrder, Promotion } from "@/domain/commerce";
+import type {
+  CommerceCustomer,
+  CommerceData,
+  CommerceOrder,
+  CommerceReturn,
+  EmailEvent,
+  Promotion,
+  StockPosition,
+} from "@/domain/commerce";
 import type { GeneratedQuery } from "@/domain/insight";
 import type { Product } from "@/domain/product";
 
@@ -13,6 +21,10 @@ const commerceSchema = buildSchema(`
     inventory: Int!
     conversionRate: Float!
     returnRate: Float!
+    views: Int!
+    addToCartRate: Float!
+    purchaseCount: Int!
+    tags: [String!]!
   }
 
   type Customer {
@@ -60,6 +72,32 @@ const commerceSchema = buildSchema(`
     active: Boolean!
   }
 
+  type Return {
+    id: ID!
+    orderId: ID!
+    productId: ID!
+    reason: String!
+    status: String!
+    requestedAt: String!
+    refundAmount: Float!
+  }
+
+  type EmailEvent {
+    id: ID!
+    customerId: ID!
+    campaignId: ID!
+    eventType: String!
+    occurredAt: String!
+  }
+
+  type StockPosition {
+    productId: ID!
+    locationId: ID!
+    onHand: Int!
+    reserved: Int!
+    reorderPoint: Int!
+  }
+
   input ProductFilter {
     tags: [String!]
     maxPrice: Float
@@ -74,6 +112,8 @@ const commerceSchema = buildSchema(`
     channel: String
     minTotal: Float
     customerId: ID
+    orderedFrom: String
+    orderedTo: String
   }
 
   input PromotionFilter {
@@ -82,11 +122,33 @@ const commerceSchema = buildSchema(`
     active: Boolean
   }
 
+  input ReturnFilter {
+    productId: ID
+    reason: String
+    status: String
+    requestedFrom: String
+    requestedTo: String
+  }
+
+  input EmailEventFilter {
+    customerId: ID
+    campaignId: ID
+    eventType: String
+  }
+
+  input StockPositionFilter {
+    productId: ID
+    locationId: ID
+  }
+
   type Query {
     products(filter: ProductFilter): [Product!]!
     customers(filter: CustomerFilter): [Customer!]!
     orders(filter: OrderFilter): [Order!]!
     promotions(filter: PromotionFilter): [Promotion!]!
+    returns(filter: ReturnFilter): [Return!]!
+    emailEvents(filter: EmailEventFilter): [EmailEvent!]!
+    stockPositions(filter: StockPositionFilter): [StockPosition!]!
   }
 `);
 
@@ -143,6 +205,12 @@ export async function executeCommerceQuery(input: {
         filterOrders(input.commerceData?.orders ?? [], filter),
       promotions: ({ filter }: { filter?: PromotionFilter }) =>
         filterPromotions(input.commerceData?.promotions ?? [], filter),
+      returns: ({ filter }: { filter?: ReturnFilter }) =>
+        filterReturns(input.commerceData?.returns ?? [], filter),
+      emailEvents: ({ filter }: { filter?: EmailEventFilter }) =>
+        filterEmailEvents(input.commerceData?.emailEvents ?? [], filter),
+      stockPositions: ({ filter }: { filter?: StockPositionFilter }) =>
+        filterStockPositions(input.commerceData?.stockPositions ?? [], filter),
     },
   });
 
@@ -178,6 +246,9 @@ export type CommerceQueryData = {
     }
   >;
   promotions: Array<Partial<Promotion> & { productIds?: string[] | null }>;
+  returns: Array<Partial<CommerceReturn> & { productId?: string | null }>;
+  emailEvents: Array<Partial<EmailEvent>>;
+  stockPositions: Array<Partial<StockPosition> & { productId?: string | null }>;
   [key: string]: unknown;
 };
 
@@ -193,6 +264,8 @@ type CustomerFilter = {
 
 type OrderFilter = {
   channel?: CommerceOrder["channel"];
+  orderedFrom?: string;
+  orderedTo?: string;
   minTotal?: number;
   customerId?: string;
 };
@@ -201,6 +274,25 @@ type PromotionFilter = {
   segment?: string;
   productId?: string;
   active?: boolean;
+};
+
+type ReturnFilter = {
+  productId?: string;
+  reason?: CommerceReturn["reason"];
+  requestedFrom?: string;
+  requestedTo?: string;
+  status?: CommerceReturn["status"];
+};
+
+type EmailEventFilter = {
+  customerId?: string;
+  campaignId?: string;
+  eventType?: EmailEvent["eventType"];
+};
+
+type StockPositionFilter = {
+  productId?: string;
+  locationId?: string;
 };
 
 function filterCustomers(
@@ -223,6 +315,13 @@ function filterOrders(orders: CommerceOrder[], filter?: OrderFilter): CommerceOr
 
   return orders
     .filter((order) => filter.channel === undefined || order.channel === filter.channel)
+    .filter(
+      (order) =>
+        filter.orderedFrom === undefined || order.orderedAt >= startOfUtcDay(filter.orderedFrom),
+    )
+    .filter(
+      (order) => filter.orderedTo === undefined || order.orderedAt <= endOfUtcDay(filter.orderedTo),
+    )
     .filter((order) => filter.minTotal === undefined || order.grandTotal >= filter.minTotal)
     .filter((order) => filter.customerId === undefined || order.customerId === filter.customerId);
 }
@@ -241,6 +340,68 @@ function filterPromotions(promotions: Promotion[], filter?: PromotionFilter): Pr
         filter.productId === undefined || promotion.productIds.includes(filter.productId),
     )
     .filter((promotion) => filter.active === undefined || promotion.active === filter.active);
+}
+
+function filterReturns(commerceReturns: CommerceReturn[], filter?: ReturnFilter): CommerceReturn[] {
+  if (!filter) {
+    return commerceReturns;
+  }
+
+  return commerceReturns
+    .filter(
+      (commerceReturn) =>
+        filter.productId === undefined || commerceReturn.productId === filter.productId,
+    )
+    .filter(
+      (commerceReturn) => filter.reason === undefined || commerceReturn.reason === filter.reason,
+    )
+    .filter(
+      (commerceReturn) =>
+        filter.requestedFrom === undefined ||
+        commerceReturn.requestedAt >= startOfUtcDay(filter.requestedFrom),
+    )
+    .filter(
+      (commerceReturn) =>
+        filter.requestedTo === undefined ||
+        commerceReturn.requestedAt <= endOfUtcDay(filter.requestedTo),
+    )
+    .filter(
+      (commerceReturn) => filter.status === undefined || commerceReturn.status === filter.status,
+    );
+}
+
+function startOfUtcDay(date: string): string {
+  return date.includes("T") ? date : `${date}T00:00:00.000Z`;
+}
+
+function endOfUtcDay(date: string): string {
+  return date.includes("T") ? date : `${date}T23:59:59.999Z`;
+}
+
+function filterEmailEvents(emailEvents: EmailEvent[], filter?: EmailEventFilter): EmailEvent[] {
+  if (!filter) {
+    return emailEvents;
+  }
+
+  return emailEvents
+    .filter((event) => filter.customerId === undefined || event.customerId === filter.customerId)
+    .filter((event) => filter.campaignId === undefined || event.campaignId === filter.campaignId)
+    .filter((event) => filter.eventType === undefined || event.eventType === filter.eventType);
+}
+
+function filterStockPositions(
+  stockPositions: StockPosition[],
+  filter?: StockPositionFilter,
+): StockPosition[] {
+  if (!filter) {
+    return stockPositions;
+  }
+
+  return stockPositions
+    .filter((position) => filter.productId === undefined || position.productId === filter.productId)
+    .filter(
+      (position) => filter.locationId === undefined || position.locationId === filter.locationId,
+    );
 }
 
 function productIdsFromQueryData(data: CommerceQueryData): Set<string> {
@@ -266,6 +427,18 @@ function productIdsFromQueryData(data: CommerceQueryData): Set<string> {
     }
   }
 
+  for (const commerceReturn of data.returns ?? []) {
+    if (commerceReturn.productId) {
+      productIds.add(commerceReturn.productId);
+    }
+  }
+
+  for (const stockPosition of data.stockPositions ?? []) {
+    if (stockPosition.productId) {
+      productIds.add(stockPosition.productId);
+    }
+  }
+
   return productIds;
 }
 
@@ -282,6 +455,9 @@ function commerceResult(
     customers: data.customers ?? [],
     orders: data.orders ?? [],
     promotions: data.promotions ?? [],
+    returns: data.returns ?? [],
+    emailEvents: data.emailEvents ?? [],
+    stockPositions: data.stockPositions ?? [],
   };
   resultProducts.recommendedProductIds = recommendedProductIds;
 

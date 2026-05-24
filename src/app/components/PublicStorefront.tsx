@@ -1,166 +1,85 @@
-import Image from "next/image";
-import Link from "next/link";
 import type { CSSProperties } from "react";
-import { getCurrentUser } from "@/app/auth/session";
-import { StorefrontCart } from "@/app/components/StorefrontCart";
-import type { StorefrontConfig } from "@/domain/storefront";
-import { resolveGuestStorefrontSelection } from "@/domain/storefrontPublishing";
-import { customers, promotions } from "@/fixtures/commerce";
+import { getCurrentUser, getStorefrontPreviewId } from "@/app/auth/session";
+import { PublicStorefrontExperience } from "@/app/components/PublicStorefrontExperience";
+import { can } from "@/domain/roles";
+import { resolveStorefrontPalette, type StorefrontConfig } from "@/domain/storefront";
+import {
+  buildStaffStorefrontVersionSelection,
+  buildStorefrontGalleryEntries,
+  resolveGuestStorefrontSelection,
+  resolveStaffStorefrontPreview,
+} from "@/domain/storefrontPublishing";
 import { products } from "@/fixtures/products";
 import { baselineStorefront } from "@/fixtures/storefront";
 import { getAppDatabase } from "@/persistence/appDatabase";
 
 export async function PublicStorefront({ version }: { version?: string }) {
   const user = await getCurrentUser();
+  const canPreviewVersions = user ? can(user.role, "publish_storefront") : false;
   const database = getAppDatabase();
+  const activeVersion = database.findActiveStorefrontVersion();
+  const publishedVersions = database.listPublishedStorefrontVersions();
+  const previewStorefrontId = canPreviewVersions ? await getStorefrontPreviewId() : null;
+  const galleryEntries = canPreviewVersions
+    ? buildStorefrontGalleryEntries({
+        drafts: database
+          .listRecentStorefrontConfigs(100)
+          .filter((config) => config.sourceDraftKey.startsWith("adaptation:")),
+        activeVersion,
+        baseline: baselineStorefront,
+        previewStorefrontId,
+      })
+    : [];
   const selection = resolveGuestStorefrontSelection({
     requestedVersionId: version,
-    activeVersion: database.findActiveStorefrontVersion(),
-    publishedVersions: database.listPublishedStorefrontVersions(),
+    activeVersion,
+    publishedVersions,
     baseline: baselineStorefront,
   });
-  const storefront = selection.storefront;
-  const hero =
-    storefront.sections.find((section) => section.type === "hero") ?? storefront.sections[0];
-  const demoPersonas = customers.slice(0, 6).map((customer) => ({
-    id: customer.id,
-    name: customer.name,
-    borough: customer.borough,
-    segment: customer.segment,
-  }));
+  const staffVersionSelection = canPreviewVersions
+    ? buildStaffStorefrontVersionSelection({
+        galleryEntries,
+        previewStorefrontId,
+      })
+    : null;
+  const preview = canPreviewVersions
+    ? resolveStaffStorefrontPreview({
+        previewStorefrontId: version ? null : previewStorefrontId,
+        drafts: database.listRecentStorefrontConfigs(100),
+        activeVersion,
+        publishedVersions,
+        baseline: baselineStorefront,
+      })
+    : null;
+  const storefront = preview?.isPreviewing ? preview.storefront : selection.storefront;
 
   return (
-    <main className="min-h-screen bg-white text-neutral-950" style={storefrontAccent(storefront)}>
-      <section className="mx-auto max-w-6xl px-6 py-8">
-        <nav className="flex items-center justify-between border-b border-neutral-200 pb-5">
-          <Link className="text-lg font-semibold" href="/">
-            Atlas & Co.
-          </Link>
-          <div className="flex items-center gap-3 text-sm text-neutral-600">
-            <Link className="font-semibold text-neutral-900" href="/admin">
-              Staff admin
-            </Link>
-            <span>{user ? `Signed in as ${user.name}` : "Public storefront"}</span>
-          </div>
-        </nav>
-        <form
-          className="mt-6 flex flex-wrap items-end justify-between gap-3 border-b border-neutral-200 pb-5 text-sm"
-          method="get"
-        >
-          <label className="grid min-w-64 gap-2 font-semibold text-neutral-900">
-            Preview version
-            <select
-              className="rounded-md border border-neutral-300 bg-white px-3 py-2 font-normal text-neutral-900"
-              defaultValue={selection.selectedVersionId}
-              name="version"
-            >
-              {selection.options.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label} ({option.status})
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="font-semibold text-neutral-700">{selection.statusLabel}</p>
-            {selection.activeVersionId ? (
-              <Link
-                className="rounded-md border border-neutral-300 px-4 py-2 font-semibold text-neutral-900"
-                href={`/?version=${selection.activeVersionId}`}
-              >
-                Active version
-              </Link>
-            ) : null}
-            <button
-              className="rounded-md bg-neutral-950 px-4 py-2 font-semibold text-white"
-              type="submit"
-            >
-              View version
-            </button>
-          </div>
-        </form>
-        <div className="grid min-h-[58vh] items-center gap-8 py-12 lg:grid-cols-[1.1fr_0.9fr]">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-[var(--storefront-accent)]">
-              {storefront.versionName}
-            </p>
-            <h1 className="mt-4 max-w-3xl text-6xl font-semibold leading-tight">{hero?.title}</h1>
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-neutral-700">{hero?.body}</p>
-            {hero && hero.productIds.length > 0 ? (
-              <div className="mt-6 flex flex-wrap gap-2">
-                {hero.productIds.map((productId) => {
-                  const product = products.find((item) => item.id === productId);
-
-                  return (
-                    <span
-                      className="rounded-full border border-neutral-300 px-3 py-1 text-sm font-medium text-neutral-800"
-                      key={productId}
-                    >
-                      {product?.name ?? productId}
-                    </span>
-                  );
-                })}
-              </div>
-            ) : null}
-          </div>
-          <div className="overflow-hidden rounded-lg border border-neutral-200 bg-neutral-100">
-            <Image
-              alt={storefront.visualAsset.alt}
-              className="aspect-[4/5] h-full w-full object-cover"
-              height={720}
-              src={storefront.visualAsset.path}
-              width={1200}
-            />
-          </div>
-        </div>
-        <div className="grid gap-6 pb-4">
-          {storefront.sections
-            .filter((section) => section.id !== hero?.id)
-            .map((section) => (
-              <section className="border-t border-neutral-200 pt-6" key={section.id}>
-                <div className="flex flex-wrap items-end justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                      {section.type}
-                    </p>
-                    <h2 className="mt-2 text-2xl font-semibold">{section.title}</h2>
-                  </div>
-                  {section.body ? (
-                    <p className="max-w-xl text-sm leading-6 text-neutral-600">{section.body}</p>
-                  ) : null}
-                </div>
-                {section.productIds.length > 0 ? (
-                  <div className="mt-5 grid gap-4 md:grid-cols-3">
-                    {section.productIds.map((productId) => {
-                      const product = products.find((item) => item.id === productId);
-
-                      return (
-                        <article
-                          className="rounded-lg border border-neutral-200 p-4"
-                          key={productId}
-                        >
-                          <h3 className="font-semibold">{product?.name ?? productId}</h3>
-                          {product ? (
-                            <p className="mt-2 text-sm text-neutral-600">
-                              £{product.price.toFixed(2)} · {product.category}
-                            </p>
-                          ) : null}
-                        </article>
-                      );
-                    })}
-                  </div>
-                ) : null}
-              </section>
-            ))}
-        </div>
-        <StorefrontCart personas={demoPersonas} products={products} promotions={promotions} />
-      </section>
-    </main>
+    <PublicStorefrontExperience
+      canPreviewVersions={canPreviewVersions}
+      products={products}
+      selection={selection}
+      staffVersionSelection={staffVersionSelection}
+      style={storefrontAccent(storefront)}
+      storefront={storefront}
+      staffPreview={preview?.isPreviewing ? { label: preview.label ?? "" } : null}
+      user={user ? { name: user.name, role: user.role } : null}
+    />
   );
 }
 
 function storefrontAccent(storefront: StorefrontConfig) {
+  const palette = resolveStorefrontPalette(storefront);
+
   return {
-    "--storefront-accent": storefront.style.accentColor,
+    "--storefront-background": palette.background,
+    "--storefront-surface": palette.surface,
+    "--storefront-text": palette.text,
+    "--storefront-muted": palette.muted,
+    "--storefront-border": palette.border,
+    "--storefront-accent": palette.accent,
+    "--storefront-secondary": palette.secondaryAccent,
+    "--storefront-button": palette.button,
+    "--storefront-button-text": palette.buttonText,
+    background: `linear-gradient(140deg, ${palette.secondaryAccent}22, transparent 34%), linear-gradient(225deg, ${palette.accent}26, transparent 30%), ${palette.background}`,
   } as CSSProperties;
 }

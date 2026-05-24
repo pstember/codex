@@ -39,8 +39,8 @@ describe("auth domain", () => {
   });
 
   it("seeds backend staff users without plaintext passwords or guest accounts", () => {
-    expect(demoUsers).toHaveLength(2);
-    expect(demoUsers.map((user) => user.role)).toEqual(["manager", "operator"]);
+    expect(demoUsers).toHaveLength(3);
+    expect(demoUsers.map((user) => user.role)).toEqual(["manager", "analyst", "operator"]);
     expect(demoUsers.every((user) => !("password" in user))).toBe(true);
     expect(demoUsers.every((user) => user.passwordHash.length > 20)).toBe(true);
   });

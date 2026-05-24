@@ -10,7 +10,6 @@ import {
   stockPositions,
 } from "@/fixtures/commerce";
 import { products } from "@/fixtures/products";
-import { createCommerceDatabase } from "@/persistence/database";
 
 describe("London commerce data", () => {
   it("keeps seeded ecommerce relationships valid and wide enough for live demos", () => {
@@ -20,9 +19,13 @@ describe("London commerce data", () => {
     const orderIds = new Set(orders.map((order) => order.id));
     const locationIds = new Set(inventoryLocations.map((location) => location.id));
 
-    expect(customers.length).toBeGreaterThanOrEqual(24);
-    expect(orders.length).toBeGreaterThanOrEqual(100);
+    expect(customers.length).toBeGreaterThanOrEqual(36);
+    expect(orders.length).toBeGreaterThanOrEqual(240);
+    expect(returns.length).toBeGreaterThanOrEqual(30);
     expect(new Set(addresses.map((address) => address.borough)).size).toBeGreaterThanOrEqual(8);
+    expect(Array.from(new Set(customers.map((customer) => customer.segment)))).toEqual(
+      expect.arrayContaining(["office-gift-buyers", "secret-santa-buyers"]),
+    );
     expect(inventoryLocations.map((location) => location.id)).toEqual([
       "london-micro-fulfilment",
       "midlands-warehouse",
@@ -57,28 +60,14 @@ describe("London commerce data", () => {
     expect(promotions.some((promotion) => promotion.segmentIds.includes("coffee-regulars"))).toBe(
       true,
     );
+    expect(
+      promotions.some((promotion) => promotion.segmentIds.includes("office-gift-buyers")),
+    ).toBe(true);
   });
 
-  it("persists seeded ecommerce source data counts in SQLite", () => {
-    const database = createCommerceDatabase();
-
-    try {
-      database.seedCommerceData({
-        customers,
-        addresses,
-        orders,
-        inventoryLocations,
-        stockPositions,
-        returns,
-        emailEvents,
-        promotions,
-      });
-
-      expect(database.countCustomers()).toBe(customers.length);
-      expect(database.countOrders()).toBe(orders.length);
-      expect(database.countPromotions()).toBe(promotions.length);
-    } finally {
-      database.close();
-    }
+  it("keeps promotion analytics in the TypeScript fixture data", () => {
+    expect(promotions.map((promotion) => promotion.id)).toEqual(
+      expect.arrayContaining(["coffee-regulars-fathers-day", "office-secret-santa-bundles"]),
+    );
   });
 });

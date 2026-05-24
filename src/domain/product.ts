@@ -4,6 +4,10 @@ export const productSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   category: z.string().min(1),
+  image: z.object({
+    path: z.string().regex(/^\/static-assets\/products\/[a-z0-9-]+\.jpg$/),
+    alt: z.string().min(1),
+  }),
   price: z.number().positive(),
   marginPercent: z.number().min(0).max(100),
   inventory: z.number().int().min(0),

@@ -1,17 +1,19 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const port = process.env.PLAYWRIGHT_PORT ?? "3000";
+const baseURL = `http://127.0.0.1:${port}`;
+
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: true,
   retries: process.env.CI ? 2 : 0,
   use: {
-    baseURL: "http://127.0.0.1:3000",
+    baseURL,
     trace: "on-first-retry",
   },
   webServer: {
-    command:
-      "rm -f /private/tmp/commerce-copilot-e2e.db && COMMERCE_DATABASE_PATH=/private/tmp/commerce-copilot-e2e.db npm run dev",
-    url: "http://127.0.0.1:3000",
+    command: `rm -f /private/tmp/commerce-copilot-e2e.db && COMMERCE_DATABASE_PATH=/private/tmp/commerce-copilot-e2e.db npm run dev -- --hostname 127.0.0.1 --port ${port}`,
+    url: baseURL,
     reuseExistingServer: false,
   },
   projects: [

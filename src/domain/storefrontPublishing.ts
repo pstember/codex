@@ -1,5 +1,9 @@
-import type { StorefrontConfig } from "@/domain/storefront";
-import type { GeneratedStorefrontConfig } from "@/domain/storefrontGeneration";
+import {
+  getHeroSection,
+  getStorefrontSectionLabel,
+  type StorefrontConfig,
+} from "@/domain/storefront";
+import type { GeneratedStorefrontConfig } from "@/domain/storefrontDraft";
 
 export type StorefrontVersionStatus = "active" | "inactive";
 
@@ -33,6 +37,11 @@ export interface StorefrontVersionComparison {
     beforePath: string;
     afterPath: string;
   };
+  textChanges: Array<{
+    label: string;
+    before: string;
+    after: string;
+  }>;
   strategicSummary: string[];
   styleChanges: Array<{
     label: string;
@@ -63,6 +72,44 @@ export interface GuestStorefrontSelection {
   }>;
 }
 
+export interface StorefrontGalleryEntry {
+  id: string;
+  versionName: string;
+  kind: "basic" | "draft";
+  config: StorefrontConfig;
+  validationStatus: "draft" | "ready" | "invalid";
+  validationErrors: string[];
+  createdAtLabel: string;
+  canDelete: boolean;
+  canPublish: boolean;
+  isPreviewing: boolean;
+  isLive: boolean;
+  sourceDraftKey: string;
+}
+
+export interface StaffStorefrontPreview {
+  storefront: StorefrontConfig;
+  previewStorefrontId: string | null;
+  isPreviewing: boolean;
+  label: string | null;
+}
+
+export interface StaffStorefrontVersionSelection {
+  selectedEntryId: string;
+  selectedEntryVersionName: string;
+  options: Array<{
+    id: string;
+    label: string;
+    status: "basic" | "draft" | "current" | "previewing";
+  }>;
+  previewActionLabel: "Preview";
+  applyActionLabel: "Apply" | "Current";
+  isApplyDisabled: boolean;
+}
+
+export const basicStorefrontId = "basic";
+export const basicStorefrontVersionName = "Basic Atlas & Co.";
+
 export function publishStorefrontConfig({
   id,
   storefrontConfig,
@@ -76,8 +123,8 @@ export function publishStorefrontConfig({
   publishedAt: Date;
   publicationStore: StorefrontPublicationStore;
 }): PublishedStorefrontVersion {
-  if (storefrontConfig.validationStatus !== "valid") {
-    throw new Error("Only valid storefront configs can be published.");
+  if (storefrontConfig.validationStatus !== "ready") {
+    throw new Error("Only ready storefront configs can be published.");
   }
 
   const version: PublishedStorefrontVersion = {
@@ -93,6 +140,173 @@ export function publishStorefrontConfig({
   publicationStore.savePublishedStorefrontVersion(version);
 
   return version;
+}
+
+export function publishBaselineStorefront({
+  id,
+  baseline,
+  publishedByUserId,
+  publishedAt,
+  publicationStore,
+}: {
+  id: string;
+  baseline: StorefrontConfig;
+  publishedByUserId: string;
+  publishedAt: Date;
+  publicationStore: StorefrontPublicationStore;
+}): PublishedStorefrontVersion {
+  const version: PublishedStorefrontVersion = {
+    id,
+    sourceStorefrontConfigId: basicStorefrontId,
+    config: toBasicStorefrontConfig(baseline),
+    status: "active",
+    rollbackOfVersionId: null,
+    publishedByUserId,
+    publishedAt,
+  };
+
+  publicationStore.savePublishedStorefrontVersion(version);
+
+  return version;
+}
+
+export function buildStorefrontGalleryEntries({
+  drafts,
+  activeVersion,
+  baseline,
+  previewStorefrontId = null,
+}: {
+  drafts: GeneratedStorefrontConfig[];
+  activeVersion: PublishedStorefrontVersion | null;
+  baseline: StorefrontConfig;
+  previewStorefrontId?: string | null;
+}): StorefrontGalleryEntry[] {
+  return [
+    {
+      id: basicStorefrontId,
+      versionName: basicStorefrontVersionName,
+      kind: "basic",
+      config: baseline,
+      validationStatus: "ready",
+      validationErrors: [],
+      createdAtLabel: "Always available",
+      canDelete: false,
+      canPublish: true,
+      isPreviewing: previewStorefrontId === basicStorefrontId,
+      isLive: activeVersion?.sourceStorefrontConfigId === basicStorefrontId,
+      sourceDraftKey: "baseline",
+    },
+    ...drafts.map((draft) => ({
+      id: draft.id,
+      versionName: draft.config.versionName,
+      kind: "draft" as const,
+      config: draft.config,
+      validationStatus: draft.validationStatus,
+      validationErrors: draft.validationErrors,
+      createdAtLabel: draft.createdAt.toLocaleString("en-GB"),
+      canDelete: true,
+      canPublish: draft.validationStatus === "ready",
+      isPreviewing: previewStorefrontId === draft.id,
+      isLive: activeVersion?.sourceStorefrontConfigId === draft.id,
+      sourceDraftKey: draft.sourceDraftKey,
+    })),
+  ];
+}
+
+export function resolveStaffStorefrontPreview({
+  previewStorefrontId,
+  drafts,
+  activeVersion,
+  publishedVersions,
+  baseline,
+}: {
+  previewStorefrontId?: string | null;
+  drafts: GeneratedStorefrontConfig[];
+  activeVersion: PublishedStorefrontVersion | null;
+  publishedVersions: PublishedStorefrontVersion[];
+  baseline: StorefrontConfig;
+}): StaffStorefrontPreview {
+  if (previewStorefrontId === basicStorefrontId) {
+    return {
+      storefront: toBasicStorefrontConfig(baseline),
+      previewStorefrontId: basicStorefrontId,
+      isPreviewing: true,
+      label: `You are previewing ${basicStorefrontVersionName}`,
+    };
+  }
+
+  const draft = previewStorefrontId
+    ? (drafts.find((storefrontConfig) => storefrontConfig.id === previewStorefrontId) ?? null)
+    : null;
+
+  if (draft) {
+    return {
+      storefront: draft.config,
+      previewStorefrontId: draft.id,
+      isPreviewing: true,
+      label: `You are previewing ${draft.config.versionName}`,
+    };
+  }
+
+  const publishedVersion = previewStorefrontId
+    ? (publishedVersions.find((version) => version.id === previewStorefrontId) ?? null)
+    : null;
+
+  if (publishedVersion) {
+    return {
+      storefront: publishedVersion.config,
+      previewStorefrontId: publishedVersion.id,
+      isPreviewing: publishedVersion.id !== activeVersion?.id,
+      label:
+        publishedVersion.id === activeVersion?.id
+          ? null
+          : `You are previewing ${publishedVersion.config.versionName}`,
+    };
+  }
+
+  return {
+    storefront: activeVersion?.config ?? baseline,
+    previewStorefrontId: null,
+    isPreviewing: false,
+    label: null,
+  };
+}
+
+export function buildStaffStorefrontVersionSelection({
+  galleryEntries,
+  previewStorefrontId,
+}: {
+  galleryEntries: StorefrontGalleryEntry[];
+  previewStorefrontId: string | null;
+}): StaffStorefrontVersionSelection {
+  const selectedEntry =
+    galleryEntries.find((entry) => entry.id === previewStorefrontId) ??
+    galleryEntries.find((entry) => entry.isLive) ??
+    galleryEntries[0];
+
+  if (!selectedEntry) {
+    return {
+      selectedEntryId: basicStorefrontId,
+      selectedEntryVersionName: basicStorefrontVersionName,
+      options: [],
+      previewActionLabel: "Preview",
+      applyActionLabel: "Apply",
+      isApplyDisabled: true,
+    };
+  }
+
+  return {
+    selectedEntryId: selectedEntry.id,
+    selectedEntryVersionName: selectedEntry.versionName,
+    options: galleryEntries.map((entry) => ({
+      id: entry.id,
+      label: entry.versionName,
+      status: entry.isLive ? "current" : entry.isPreviewing ? "previewing" : entry.kind,
+    })),
+    previewActionLabel: "Preview",
+    applyActionLabel: selectedEntry.isLive ? "Current" : "Apply",
+    isApplyDisabled: selectedEntry.isLive || !selectedEntry.canPublish,
+  };
 }
 
 export function resolveGuestStorefrontSelection({
@@ -132,6 +346,13 @@ export function resolveGuestStorefrontSelection({
   };
 }
 
+function toBasicStorefrontConfig(baseline: StorefrontConfig): StorefrontConfig {
+  return {
+    ...baseline,
+    versionName: basicStorefrontVersionName,
+  };
+}
+
 export function compareStorefrontVersions({
   base,
   selected,
@@ -158,6 +379,7 @@ export function compareStorefrontVersions({
       beforePath: base.visualAsset.path,
       afterPath: selected.visualAsset.path,
     },
+    textChanges: compareStorefrontText(base, selected),
     strategicSummary: buildStrategicSummary(base, selected, baseHero, selectedHero),
     styleChanges: [
       styleChange("Theme", base.style.theme, selected.style.theme),
@@ -172,8 +394,38 @@ export function compareStorefrontVersions({
   };
 }
 
-function getHeroSection(config: StorefrontConfig) {
-  return config.sections.find((section) => section.type === "hero") ?? config.sections[0];
+function compareStorefrontText(base: StorefrontConfig, selected: StorefrontConfig) {
+  const changes = [
+    textChange("Selection name", base.versionName, selected.versionName),
+    textChange("Hero title", getHeroSection(base).title, getHeroSection(selected).title),
+    textChange("Hero copy", getHeroSection(base).body ?? "", getHeroSection(selected).body ?? ""),
+    textChange("Hero visual prompt", base.visualAsset.prompt, selected.visualAsset.prompt),
+    textChange("Image alt text", base.visualAsset.alt, selected.visualAsset.alt),
+  ];
+  for (const [index, baseSection] of base.sections.entries()) {
+    const selectedSection =
+      selected.sections.find((section) => section.id === baseSection.id) ??
+      selected.sections[index];
+
+    if (!selectedSection) {
+      continue;
+    }
+
+    if (baseSection.type !== "hero") {
+      const sectionLabel = getStorefrontSectionLabel(baseSection, index);
+
+      changes.push(textChange(`${sectionLabel} title`, baseSection.title, selectedSection.title));
+      changes.push(
+        textChange(`${sectionLabel} copy`, baseSection.body ?? "", selectedSection.body ?? ""),
+      );
+    }
+  }
+
+  return changes.filter((change) => change.before !== change.after);
+}
+
+function textChange(label: string, before: string, after: string) {
+  return { label, before, after };
 }
 
 function getGuestVersionStatusLabel(
@@ -185,7 +437,7 @@ function getGuestVersionStatusLabel(
   }
 
   if (selectedVersion.id === activeVersion?.id) {
-    return "Viewing active version";
+    return "Viewing current version";
   }
 
   return "Previewing inactive version";

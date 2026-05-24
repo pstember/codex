@@ -1,6 +1,5 @@
 import type { GeneratedQuery, InsightSummary } from "@/domain/insight";
-import { fatherDayCampaign, secretSantaCampaign } from "@/fixtures/campaigns";
-import { fatherDayStorefront, secretSantaStorefront } from "@/fixtures/storefront";
+import { secretSantaStorefront } from "@/fixtures/storefront";
 import type { CodexHarness } from "@/harness/codexHarness";
 
 const fatherDayQuery: GeneratedQuery = {
@@ -168,7 +167,11 @@ export const fixtureCodexHarness: CodexHarness = {
         title: "Under-£50 giftability is strongest in coffee, desk, grooming, and compact tech.",
         summary:
           "Secret Santa should avoid high-return electronics and focus on high-stock small gifts.",
-        recommendedProductIds: secretSantaCampaign.productIds,
+        recommendedProductIds: [
+          "cast-iron-grill-press",
+          "travel-grooming-kit",
+          "wireless-charging-valet",
+        ],
         risks: ["Avoid noise-canceling earbuds because return rate is elevated."],
       };
     }
@@ -177,17 +180,42 @@ export const fixtureCodexHarness: CodexHarness = {
       title: "Father’s Day opportunity favors grilling, travel, and everyday carry.",
       summary:
         "Outdoor and travel products combine high margin, healthy inventory, and strong conversion.",
-      recommendedProductIds: fatherDayCampaign.productIds,
+      recommendedProductIds: [
+        "portable-charcoal-grill",
+        "cast-iron-grill-press",
+        "leather-weekender-bag",
+        "travel-grooming-kit",
+        "wireless-charging-valet",
+        "insulated-cooler-tote",
+      ],
       risks: [
         "Do not lead with the espresso machine because stock is low and margin is weak.",
         "Avoid heavy promotion of earbuds because return rate is high.",
       ],
     };
   },
-  async generateCampaignProposal(input) {
-    return input.season === "secret-santa" ? secretSantaCampaign : fatherDayCampaign;
+  async generateStorefrontAdaptation(input) {
+    const eventSlug = input.eventName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+
+    return {
+      ...secretSantaStorefront,
+      id: `event-${eventSlug}-storefront`,
+      campaignId: `event-${eventSlug}`,
+      versionName: input.eventName,
+    };
   },
-  async generateStorefrontConfig(campaign) {
-    return campaign.season === "secret-santa" ? secretSantaStorefront : fatherDayStorefront;
+  async generateStorefrontAdaptationTrace(input) {
+    const value = await this.generateStorefrontAdaptation(input);
+
+    return {
+      harnessMode: this.mode,
+      prompt: input.operatorPrompt,
+      rawResponse: JSON.stringify(value),
+      schemaName: "StorefrontConfig",
+      value,
+    };
   },
 };

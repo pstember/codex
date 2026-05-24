@@ -14,6 +14,11 @@ const demoStaffCredentials = [
     password: demoStaffPasswords.manager,
   },
   {
+    role: "Analyst",
+    email: "analyst@demo.com",
+    password: demoStaffPasswords.analyst,
+  },
+  {
     role: "Operator",
     email: "operator@demo.com",
     password: demoStaffPasswords.operator,
@@ -36,7 +41,7 @@ export function AuthPanel({ currentUser, loginError = false }: AuthPanelProps) {
             className="w-full rounded-md bg-neutral-950 px-4 py-3 text-sm font-semibold text-white"
             type="submit"
           >
-            Sign out
+            Logout
           </button>
         </form>
       ) : (

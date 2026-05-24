@@ -1,12 +1,12 @@
 import { createRequire } from "node:module";
 import type { AuthStore } from "@/domain/auth";
 import type { CodexRun, CodexRunEvent } from "@/domain/codexRun";
-import type { CommerceData } from "@/domain/commerce";
-import type { MetricsTrace } from "@/domain/metricsTrace";
-import type { CampaignProposal } from "@/domain/operatorCampaign";
-import type { Product } from "@/domain/product";
-import type { CampaignVisualAsset, StorefrontConfig } from "@/domain/storefront";
-import type { GeneratedStorefrontConfig } from "@/domain/storefrontGeneration";
+import {
+  type CampaignVisualAsset,
+  hydrateLegacyStorefrontSectionIntents,
+  type StorefrontConfig,
+} from "@/domain/storefront";
+import type { GeneratedStorefrontConfig } from "@/domain/storefrontDraft";
 import type { PublishedStorefrontVersion } from "@/domain/storefrontPublishing";
 import type { AuthenticatedUser, User } from "@/domain/users";
 
@@ -16,29 +16,19 @@ const { DatabaseSync } = createRequire(import.meta.url)(
 
 export interface CommerceDatabase extends AuthStore {
   close(): void;
-  seedProducts(products: Product[]): void;
-  seedCommerceData(data: CommerceData): void;
   seedUsers(users: User[]): void;
-  countProducts(): number;
-  countCustomers(): number;
-  countOrders(): number;
-  countPromotions(): number;
   countUsers(): number;
-  saveMetricsTrace(trace: MetricsTrace): void;
-  listRecentMetricsTraces(limit?: number): MetricsTrace[];
-  findMetricsTraceById(id: string): MetricsTrace | null;
-  saveCampaignProposal(proposal: CampaignProposal): void;
-  listRecentCampaignProposals(limit?: number): CampaignProposal[];
-  findCampaignProposalById(id: string): CampaignProposal | null;
   saveStorefrontConfig(storefrontConfig: GeneratedStorefrontConfig): void;
   listRecentStorefrontConfigs(limit?: number): GeneratedStorefrontConfig[];
   findStorefrontConfigById(id: string): GeneratedStorefrontConfig | null;
+  deleteStorefrontConfig(id: string): void;
   savePublishedStorefrontVersion(version: PublishedStorefrontVersion): void;
   listPublishedStorefrontVersions(limit?: number): PublishedStorefrontVersion[];
   findPublishedStorefrontVersionById(id: string): PublishedStorefrontVersion | null;
   findActiveStorefrontVersion(): PublishedStorefrontVersion | null;
   saveCodexRun(run: CodexRun): void;
   saveCodexRunEvent(event: CodexRunEvent): void;
+  listRecentCodexRuns(limit?: number): CodexRun[];
   listCodexRunEvents(runId: string): CodexRunEvent[];
 }
 
@@ -46,18 +36,6 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
   const database = new DatabaseSync(path);
 
   database.exec(`
-    CREATE TABLE IF NOT EXISTS products (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      category TEXT NOT NULL,
-      price REAL NOT NULL,
-      margin_percent REAL NOT NULL,
-      inventory INTEGER NOT NULL,
-      conversion_rate REAL NOT NULL,
-      return_rate REAL NOT NULL,
-      tags_json TEXT NOT NULL
-    );
-
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       email TEXT NOT NULL UNIQUE,
@@ -72,75 +50,9 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
       expires_at TEXT NOT NULL
     );
 
-    CREATE TABLE IF NOT EXISTS commerce_customers (
-      id TEXT PRIMARY KEY,
-      data_json TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS commerce_addresses (
-      id TEXT PRIMARY KEY,
-      data_json TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS commerce_orders (
-      id TEXT PRIMARY KEY,
-      data_json TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS commerce_inventory_locations (
-      id TEXT PRIMARY KEY,
-      data_json TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS commerce_stock_positions (
-      product_id TEXT NOT NULL,
-      location_id TEXT NOT NULL,
-      data_json TEXT NOT NULL,
-      PRIMARY KEY (product_id, location_id)
-    );
-
-    CREATE TABLE IF NOT EXISTS commerce_returns (
-      id TEXT PRIMARY KEY,
-      data_json TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS commerce_email_events (
-      id TEXT PRIMARY KEY,
-      data_json TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS commerce_promotions (
-      id TEXT PRIMARY KEY,
-      data_json TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS metrics_traces (
-      id TEXT PRIMARY KEY,
-      question TEXT NOT NULL,
-      operation_name TEXT NOT NULL,
-      validation_status TEXT NOT NULL,
-      validation_errors_json TEXT NOT NULL DEFAULT '[]',
-      generated_graphql TEXT NOT NULL DEFAULT '',
-      rationale TEXT NOT NULL DEFAULT '',
-      chart_type TEXT NOT NULL,
-      recommended_product_ids_json TEXT NOT NULL,
-      created_by_user_id TEXT NOT NULL,
-      created_at TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS campaign_proposals (
-      id TEXT PRIMARY KEY,
-      source_trace_id TEXT NOT NULL,
-      campaign_json TEXT NOT NULL,
-      validation_status TEXT NOT NULL,
-      validation_errors_json TEXT NOT NULL,
-      created_by_user_id TEXT NOT NULL,
-      created_at TEXT NOT NULL
-    );
-
     CREATE TABLE IF NOT EXISTS storefront_configs (
       id TEXT PRIMARY KEY,
-      source_proposal_id TEXT NOT NULL,
+      source_draft_key TEXT NOT NULL,
       config_json TEXT NOT NULL,
       validation_status TEXT NOT NULL,
       validation_errors_json TEXT NOT NULL,
@@ -178,27 +90,6 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
       ON codex_run_events (run_id, occurred_at, sequence);
   `);
 
-  const metricTraceColumns = database.prepare("PRAGMA table_info(metrics_traces);").all() as Array<{
-    name: string;
-  }>;
-  const metricTraceColumnNames = new Set(metricTraceColumns.map((column) => column.name));
-
-  if (!metricTraceColumnNames.has("validation_errors_json")) {
-    database.exec(
-      "ALTER TABLE metrics_traces ADD COLUMN validation_errors_json TEXT NOT NULL DEFAULT '[]';",
-    );
-  }
-
-  if (!metricTraceColumnNames.has("generated_graphql")) {
-    database.exec(
-      "ALTER TABLE metrics_traces ADD COLUMN generated_graphql TEXT NOT NULL DEFAULT '';",
-    );
-  }
-
-  if (!metricTraceColumnNames.has("rationale")) {
-    database.exec("ALTER TABLE metrics_traces ADD COLUMN rationale TEXT NOT NULL DEFAULT '';");
-  }
-
   const userColumns = database.prepare("PRAGMA table_info(users);").all() as Array<{
     name: string;
   }>;
@@ -207,30 +98,6 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
   if (!userColumnNames.has("password_hash")) {
     database.exec("ALTER TABLE users ADD COLUMN password_hash TEXT NOT NULL DEFAULT '';");
   }
-
-  const insertProduct = database.prepare(`
-    INSERT INTO products (
-      id,
-      name,
-      category,
-      price,
-      margin_percent,
-      inventory,
-      conversion_rate,
-      return_rate,
-      tags_json
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(id) DO UPDATE SET
-      name = excluded.name,
-      category = excluded.category,
-      price = excluded.price,
-      margin_percent = excluded.margin_percent,
-      inventory = excluded.inventory,
-      conversion_rate = excluded.conversion_rate,
-      return_rate = excluded.return_rate,
-      tags_json = excluded.tags_json;
-  `);
 
   const insertUser = database.prepare(`
     INSERT INTO users (id, email, name, role, password_hash)
@@ -245,54 +112,6 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
   const insertSession = database.prepare(`
     INSERT INTO sessions (id, user_id, expires_at)
     VALUES (?, ?, ?);
-  `);
-
-  const upsertCommerceCustomer = database.prepare(`
-    INSERT INTO commerce_customers (id, data_json)
-    VALUES (?, ?)
-    ON CONFLICT(id) DO UPDATE SET data_json = excluded.data_json;
-  `);
-
-  const upsertCommerceAddress = database.prepare(`
-    INSERT INTO commerce_addresses (id, data_json)
-    VALUES (?, ?)
-    ON CONFLICT(id) DO UPDATE SET data_json = excluded.data_json;
-  `);
-
-  const upsertCommerceOrder = database.prepare(`
-    INSERT INTO commerce_orders (id, data_json)
-    VALUES (?, ?)
-    ON CONFLICT(id) DO UPDATE SET data_json = excluded.data_json;
-  `);
-
-  const upsertCommerceInventoryLocation = database.prepare(`
-    INSERT INTO commerce_inventory_locations (id, data_json)
-    VALUES (?, ?)
-    ON CONFLICT(id) DO UPDATE SET data_json = excluded.data_json;
-  `);
-
-  const upsertCommerceStockPosition = database.prepare(`
-    INSERT INTO commerce_stock_positions (product_id, location_id, data_json)
-    VALUES (?, ?, ?)
-    ON CONFLICT(product_id, location_id) DO UPDATE SET data_json = excluded.data_json;
-  `);
-
-  const upsertCommerceReturn = database.prepare(`
-    INSERT INTO commerce_returns (id, data_json)
-    VALUES (?, ?)
-    ON CONFLICT(id) DO UPDATE SET data_json = excluded.data_json;
-  `);
-
-  const upsertCommerceEmailEvent = database.prepare(`
-    INSERT INTO commerce_email_events (id, data_json)
-    VALUES (?, ?)
-    ON CONFLICT(id) DO UPDATE SET data_json = excluded.data_json;
-  `);
-
-  const upsertCommercePromotion = database.prepare(`
-    INSERT INTO commerce_promotions (id, data_json)
-    VALUES (?, ?)
-    ON CONFLICT(id) DO UPDATE SET data_json = excluded.data_json;
   `);
 
   const findUserByEmailStatement = database.prepare(`
@@ -314,34 +133,6 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
 
   const deleteSessionStatement = database.prepare(`
     DELETE FROM sessions WHERE id = ?;
-  `);
-
-  const insertMetricsTrace = database.prepare(`
-    INSERT INTO metrics_traces (
-      id,
-      question,
-      operation_name,
-      validation_status,
-      validation_errors_json,
-      generated_graphql,
-      rationale,
-      chart_type,
-      recommended_product_ids_json,
-      created_by_user_id,
-      created_at
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(id) DO UPDATE SET
-      question = excluded.question,
-      operation_name = excluded.operation_name,
-      validation_status = excluded.validation_status,
-      validation_errors_json = excluded.validation_errors_json,
-      generated_graphql = excluded.generated_graphql,
-      rationale = excluded.rationale,
-      chart_type = excluded.chart_type,
-      recommended_product_ids_json = excluded.recommended_product_ids_json,
-      created_by_user_id = excluded.created_by_user_id,
-      created_at = excluded.created_at;
   `);
 
   const insertCodexRun = database.prepare(`
@@ -369,6 +160,17 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
     VALUES (?, ?, ?, ?, ?);
   `);
 
+  const listRecentCodexRuns = database.prepare(`
+    SELECT
+      id,
+      question,
+      created_by_user_id AS createdByUserId,
+      created_at AS createdAt
+    FROM codex_runs
+    ORDER BY created_at DESC
+    LIMIT ?;
+  `);
+
   const listCodexRunEvents = database.prepare(`
     SELECT
       run_id AS runId,
@@ -381,92 +183,10 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
     ORDER BY occurred_at ASC, sequence ASC;
   `);
 
-  const listMetricsTraces = database.prepare(`
-    SELECT
-      id,
-      question,
-      operation_name AS operationName,
-      validation_status AS validationStatus,
-      validation_errors_json AS validationErrorsJson,
-      generated_graphql AS generatedGraphql,
-      rationale,
-      chart_type AS chartType,
-      recommended_product_ids_json AS recommendedProductIdsJson,
-      created_by_user_id AS createdByUserId,
-      created_at AS createdAt
-    FROM metrics_traces
-    ORDER BY created_at DESC
-    LIMIT ?;
-  `);
-
-  const findMetricsTrace = database.prepare(`
-    SELECT
-      id,
-      question,
-      operation_name AS operationName,
-      validation_status AS validationStatus,
-      validation_errors_json AS validationErrorsJson,
-      generated_graphql AS generatedGraphql,
-      rationale,
-      chart_type AS chartType,
-      recommended_product_ids_json AS recommendedProductIdsJson,
-      created_by_user_id AS createdByUserId,
-      created_at AS createdAt
-    FROM metrics_traces
-    WHERE id = ?;
-  `);
-
-  const insertCampaignProposal = database.prepare(`
-    INSERT INTO campaign_proposals (
-      id,
-      source_trace_id,
-      campaign_json,
-      validation_status,
-      validation_errors_json,
-      created_by_user_id,
-      created_at
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(id) DO UPDATE SET
-      source_trace_id = excluded.source_trace_id,
-      campaign_json = excluded.campaign_json,
-      validation_status = excluded.validation_status,
-      validation_errors_json = excluded.validation_errors_json,
-      created_by_user_id = excluded.created_by_user_id,
-      created_at = excluded.created_at;
-  `);
-
-  const listCampaignProposals = database.prepare(`
-    SELECT
-      id,
-      source_trace_id AS sourceTraceId,
-      campaign_json AS campaignJson,
-      validation_status AS validationStatus,
-      validation_errors_json AS validationErrorsJson,
-      created_by_user_id AS createdByUserId,
-      created_at AS createdAt
-    FROM campaign_proposals
-    ORDER BY created_at DESC
-    LIMIT ?;
-  `);
-
-  const findCampaignProposal = database.prepare(`
-    SELECT
-      id,
-      source_trace_id AS sourceTraceId,
-      campaign_json AS campaignJson,
-      validation_status AS validationStatus,
-      validation_errors_json AS validationErrorsJson,
-      created_by_user_id AS createdByUserId,
-      created_at AS createdAt
-    FROM campaign_proposals
-    WHERE id = ?;
-  `);
-
   const insertStorefrontConfig = database.prepare(`
     INSERT INTO storefront_configs (
       id,
-      source_proposal_id,
+      source_draft_key,
       config_json,
       validation_status,
       validation_errors_json,
@@ -475,7 +195,7 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
     )
     VALUES (?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
-      source_proposal_id = excluded.source_proposal_id,
+      source_draft_key = excluded.source_draft_key,
       config_json = excluded.config_json,
       validation_status = excluded.validation_status,
       validation_errors_json = excluded.validation_errors_json,
@@ -486,7 +206,7 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
   const listStorefrontConfigs = database.prepare(`
     SELECT
       id,
-      source_proposal_id AS sourceProposalId,
+      source_draft_key AS sourceDraftKey,
       config_json AS configJson,
       validation_status AS validationStatus,
       validation_errors_json AS validationErrorsJson,
@@ -500,13 +220,18 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
   const findStorefrontConfig = database.prepare(`
     SELECT
       id,
-      source_proposal_id AS sourceProposalId,
+      source_draft_key AS sourceDraftKey,
       config_json AS configJson,
       validation_status AS validationStatus,
       validation_errors_json AS validationErrorsJson,
       created_by_user_id AS createdByUserId,
       created_at AS createdAt
     FROM storefront_configs
+    WHERE id = ?;
+  `);
+
+  const deleteStorefrontConfig = database.prepare(`
+    DELETE FROM storefront_configs
     WHERE id = ?;
   `);
 
@@ -578,34 +303,6 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
     LIMIT 1;
   `);
 
-  function parseMetricsTraceRow(row: {
-    id: string;
-    question: string;
-    operationName: string;
-    validationStatus: MetricsTrace["validationStatus"];
-    validationErrorsJson: string;
-    generatedGraphql: string;
-    rationale: string;
-    chartType: MetricsTrace["chartType"];
-    recommendedProductIdsJson: string;
-    createdByUserId: string;
-    createdAt: string;
-  }): MetricsTrace {
-    return {
-      id: row.id,
-      question: row.question,
-      operationName: row.operationName,
-      validationStatus: row.validationStatus,
-      validationErrors: JSON.parse(row.validationErrorsJson) as string[],
-      generatedGraphql: row.generatedGraphql,
-      rationale: row.rationale,
-      chartType: row.chartType,
-      recommendedProductIds: JSON.parse(row.recommendedProductIdsJson) as string[],
-      createdByUserId: row.createdByUserId,
-      createdAt: new Date(row.createdAt),
-    };
-  }
-
   function parseCodexRunEventRow(row: {
     runId: string;
     stage: string;
@@ -622,21 +319,15 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
     };
   }
 
-  function parseCampaignProposalRow(row: {
+  function parseCodexRunRow(row: {
     id: string;
-    sourceTraceId: string;
-    campaignJson: string;
-    validationStatus: CampaignProposal["validationStatus"];
-    validationErrorsJson: string;
+    question: string;
     createdByUserId: string;
     createdAt: string;
-  }): CampaignProposal {
+  }): CodexRun {
     return {
       id: row.id,
-      sourceTraceId: row.sourceTraceId,
-      campaign: JSON.parse(row.campaignJson) as CampaignProposal["campaign"],
-      validationStatus: row.validationStatus,
-      validationErrors: JSON.parse(row.validationErrorsJson) as string[],
+      question: row.question,
       createdByUserId: row.createdByUserId,
       createdAt: new Date(row.createdAt),
     };
@@ -644,7 +335,7 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
 
   function parseStorefrontConfigRow(row: {
     id: string;
-    sourceProposalId: string;
+    sourceDraftKey: string;
     configJson: string;
     validationStatus: GeneratedStorefrontConfig["validationStatus"];
     validationErrorsJson: string;
@@ -653,7 +344,7 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
   }): GeneratedStorefrontConfig {
     return {
       id: row.id,
-      sourceProposalId: row.sourceProposalId,
+      sourceDraftKey: row.sourceDraftKey,
       config: parseStorefrontConfigJson(row.configJson),
       validationStatus: row.validationStatus,
       validationErrors: JSON.parse(row.validationErrorsJson) as string[],
@@ -684,11 +375,26 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
 
   function parseStorefrontConfigJson(configJson: string): StorefrontConfig {
     const config = JSON.parse(configJson) as StorefrontConfig;
+    const defaultComposition = {
+      slot: "storefrontHeroWide",
+      aspectRatio: "14 / 9",
+      focalPoint: "right-center",
+      safeArea: "copy-left-half",
+      objectPosition: "72% center",
+    } as const;
 
-    return {
+    return hydrateLegacyStorefrontSectionIntents({
       ...config,
-      visualAsset: config.visualAsset ?? fallbackVisualAssetFor(config),
-    };
+      visualAsset: config.visualAsset
+        ? {
+            ...config.visualAsset,
+            composition: {
+              ...defaultComposition,
+              ...config.visualAsset.composition,
+            },
+          }
+        : fallbackVisualAssetFor(config),
+    });
   }
 
   function fallbackVisualAssetFor(config: StorefrontConfig): CampaignVisualAsset {
@@ -700,6 +406,13 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
         alt: "A festive desk scene with wrapped small gifts from Atlas & Co.",
         source: "static",
         path: "/static-assets/secret-santa-hero.svg",
+        composition: {
+          slot: "storefrontHeroWide",
+          aspectRatio: "14 / 9",
+          focalPoint: "right-center",
+          safeArea: "copy-left-half",
+          objectPosition: "72% center",
+        },
       };
     }
 
@@ -711,100 +424,37 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
         alt: "A warm outdoor Father’s Day gifting scene with grilling and travel essentials.",
         source: "static",
         path: "/static-assets/fathers-day-hero.svg",
+        composition: {
+          slot: "storefrontHeroWide",
+          aspectRatio: "14 / 9",
+          focalPoint: "right-center",
+          safeArea: "copy-left-half",
+          objectPosition: "72% center",
+        },
       };
     }
 
     return {
       id: "evergreen-hero-asset",
       campaignId: config.campaignId,
-      prompt: "Evergreen Atlas & Co. product curation.",
-      alt: "A clean Atlas & Co. arrangement of coffee, desk, and travel essentials.",
+      prompt:
+        "Bright Atlas & Co. tabletop hero with coffee, desk, and travel essentials in a clean everyday retail style.",
+      alt: "A bright Atlas & Co. tabletop scene with coffee gear, a desk lamp, and everyday gift essentials.",
       source: "static",
-      path: "/static-assets/baseline-hero.svg",
+      path: "/static-assets/basic-hero.svg",
+      composition: {
+        slot: "storefrontHeroWide",
+        aspectRatio: "14 / 9",
+        focalPoint: "right-center",
+        safeArea: "copy-left-half",
+        objectPosition: "72% center",
+      },
     };
-  }
-
-  function countRows(tableName: string): number {
-    const row = database.prepare(`SELECT COUNT(*) AS count FROM ${tableName}`).get() as {
-      count: number;
-    };
-
-    return row.count;
   }
 
   return {
     close() {
       database.close();
-    },
-    seedProducts(products) {
-      database.exec("BEGIN");
-
-      try {
-        for (const product of products) {
-          insertProduct.run(
-            product.id,
-            product.name,
-            product.category,
-            product.price,
-            product.marginPercent,
-            product.inventory,
-            product.conversionRate,
-            product.returnRate,
-            JSON.stringify(product.tags),
-          );
-        }
-
-        database.exec("COMMIT");
-      } catch (error) {
-        database.exec("ROLLBACK");
-        throw error;
-      }
-    },
-    seedCommerceData(data) {
-      database.exec("BEGIN");
-
-      try {
-        for (const customer of data.customers) {
-          upsertCommerceCustomer.run(customer.id, JSON.stringify(customer));
-        }
-
-        for (const address of data.addresses) {
-          upsertCommerceAddress.run(address.id, JSON.stringify(address));
-        }
-
-        for (const order of data.orders) {
-          upsertCommerceOrder.run(order.id, JSON.stringify(order));
-        }
-
-        for (const location of data.inventoryLocations) {
-          upsertCommerceInventoryLocation.run(location.id, JSON.stringify(location));
-        }
-
-        for (const stockPosition of data.stockPositions) {
-          upsertCommerceStockPosition.run(
-            stockPosition.productId,
-            stockPosition.locationId,
-            JSON.stringify(stockPosition),
-          );
-        }
-
-        for (const returnRequest of data.returns) {
-          upsertCommerceReturn.run(returnRequest.id, JSON.stringify(returnRequest));
-        }
-
-        for (const emailEvent of data.emailEvents) {
-          upsertCommerceEmailEvent.run(emailEvent.id, JSON.stringify(emailEvent));
-        }
-
-        for (const promotion of data.promotions) {
-          upsertCommercePromotion.run(promotion.id, JSON.stringify(promotion));
-        }
-
-        database.exec("COMMIT");
-      } catch (error) {
-        database.exec("ROLLBACK");
-        throw error;
-      }
     },
     seedUsers(users) {
       database.exec("BEGIN");
@@ -822,22 +472,6 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
         database.exec("ROLLBACK");
         throw error;
       }
-    },
-    countProducts() {
-      const row = database.prepare("SELECT COUNT(*) AS count FROM products").get() as {
-        count: number;
-      };
-
-      return row.count;
-    },
-    countCustomers() {
-      return countRows("commerce_customers");
-    },
-    countOrders() {
-      return countRows("commerce_orders");
-    },
-    countPromotions() {
-      return countRows("commerce_promotions");
     },
     countUsers() {
       const row = database.prepare("SELECT COUNT(*) AS count FROM users").get() as {
@@ -877,74 +511,10 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
     deleteSession(sessionId) {
       deleteSessionStatement.run(sessionId);
     },
-    saveMetricsTrace(trace) {
-      insertMetricsTrace.run(
-        trace.id,
-        trace.question,
-        trace.operationName,
-        trace.validationStatus,
-        JSON.stringify(trace.validationErrors),
-        trace.generatedGraphql,
-        trace.rationale,
-        trace.chartType,
-        JSON.stringify(trace.recommendedProductIds),
-        trace.createdByUserId,
-        trace.createdAt.toISOString(),
-      );
-    },
-    listRecentMetricsTraces(limit = 5) {
-      const rows = listMetricsTraces.all(limit) as Array<{
-        id: string;
-        question: string;
-        operationName: string;
-        validationStatus: MetricsTrace["validationStatus"];
-        validationErrorsJson: string;
-        generatedGraphql: string;
-        rationale: string;
-        chartType: MetricsTrace["chartType"];
-        recommendedProductIdsJson: string;
-        createdByUserId: string;
-        createdAt: string;
-      }>;
-
-      return rows.map(parseMetricsTraceRow);
-    },
-    findMetricsTraceById(id) {
-      const row = findMetricsTrace.get(id) as
-        | Parameters<typeof parseMetricsTraceRow>[0]
-        | undefined;
-
-      return row ? parseMetricsTraceRow(row) : null;
-    },
-    saveCampaignProposal(proposal) {
-      insertCampaignProposal.run(
-        proposal.id,
-        proposal.sourceTraceId,
-        JSON.stringify(proposal.campaign),
-        proposal.validationStatus,
-        JSON.stringify(proposal.validationErrors),
-        proposal.createdByUserId,
-        proposal.createdAt.toISOString(),
-      );
-    },
-    listRecentCampaignProposals(limit = 5) {
-      const rows = listCampaignProposals.all(limit) as Array<
-        Parameters<typeof parseCampaignProposalRow>[0]
-      >;
-
-      return rows.map(parseCampaignProposalRow);
-    },
-    findCampaignProposalById(id) {
-      const row = findCampaignProposal.get(id) as
-        | Parameters<typeof parseCampaignProposalRow>[0]
-        | undefined;
-
-      return row ? parseCampaignProposalRow(row) : null;
-    },
     saveStorefrontConfig(storefrontConfig) {
       insertStorefrontConfig.run(
         storefrontConfig.id,
-        storefrontConfig.sourceProposalId,
+        storefrontConfig.sourceDraftKey,
         JSON.stringify(storefrontConfig.config),
         storefrontConfig.validationStatus,
         JSON.stringify(storefrontConfig.validationErrors),
@@ -965,6 +535,9 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
         | undefined;
 
       return row ? parseStorefrontConfigRow(row) : null;
+    },
+    deleteStorefrontConfig(id) {
+      deleteStorefrontConfig.run(id);
     },
     savePublishedStorefrontVersion(version) {
       database.exec("BEGIN");
@@ -1022,6 +595,11 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
         event.occurredAt.toISOString(),
         JSON.stringify(event.payload),
       );
+    },
+    listRecentCodexRuns(limit = 10) {
+      const rows = listRecentCodexRuns.all(limit) as Array<Parameters<typeof parseCodexRunRow>[0]>;
+
+      return rows.map(parseCodexRunRow);
     },
     listCodexRunEvents(runId) {
       const rows = listCodexRunEvents.all(runId) as Array<

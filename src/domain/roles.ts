@@ -1,17 +1,17 @@
-export const roles = ["manager", "operator", "guest"] as const;
+export const roles = ["manager", "analyst", "operator", "guest"] as const;
 
 export type Role = (typeof roles)[number];
 
 export type Permission =
   | "ask_deep_metrics"
   | "view_codex_traces"
-  | "approve_campaign"
   | "publish_storefront"
   | "view_storefront";
 
 const rolePermissions: Record<Role, Permission[]> = {
-  manager: ["ask_deep_metrics", "view_codex_traces", "view_storefront"],
-  operator: ["approve_campaign", "publish_storefront", "view_storefront"],
+  manager: ["ask_deep_metrics", "view_codex_traces", "publish_storefront", "view_storefront"],
+  analyst: ["ask_deep_metrics", "view_codex_traces", "view_storefront"],
+  operator: ["publish_storefront", "view_storefront"],
   guest: ["view_storefront"],
 };
 

@@ -1,13 +1,71 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800;900&display=swap");
 @import "tailwindcss";
 
 :root {
   color-scheme: light;
-  --background: #f3f0e8;
-  --foreground: #17241f;
+  --background: #f4f7ff;
+  --foreground: #0b1020;
+  --font-display: "Poppins", "Aptos Display", sans-serif;
+  --font-body: "Inter", "Aptos", "Segoe UI", sans-serif;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: "Aptos", "Avenir Next", "Segoe UI", sans-serif;
+  font-family: var(--font-body);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+}
+
+.d20-stage {
+  background:
+    linear-gradient(115deg, rgba(34, 211, 238, 0.16), transparent 34%),
+    linear-gradient(245deg, rgba(255, 176, 32, 0.2), transparent 28%),
+    linear-gradient(180deg, #f9fbff 0%, #eaf0ff 46%, #f7fbff 100%);
+}
+
+.d20-hero {
+  background:
+    linear-gradient(135deg, rgba(34, 211, 238, 0.26), transparent 34%),
+    linear-gradient(225deg, rgba(215, 255, 63, 0.2), transparent 28%),
+    radial-gradient(circle at 82% 12%, rgba(255, 93, 115, 0.32), transparent 24%), #0b1020;
+}
+
+.d20-hero::before {
+  background:
+    linear-gradient(30deg, transparent 0 48%, rgba(255, 255, 255, 0.16) 49% 51%, transparent 52%),
+    linear-gradient(150deg, transparent 0 42%, rgba(103, 232, 249, 0.24) 43% 45%, transparent 46%),
+    linear-gradient(270deg, transparent 0 58%, rgba(215, 255, 63, 0.18) 59% 61%, transparent 62%);
+  clip-path: polygon(70% 0, 100% 18%, 92% 76%, 62% 100%, 44% 44%);
+  content: "";
+  inset: 0;
+  opacity: 0.8;
+  position: absolute;
+}
+
+.d20-card {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(244, 248, 255, 0.92)),
+    linear-gradient(315deg, rgba(34, 211, 238, 0.08), transparent 44%);
+  border-color: rgba(37, 99, 235, 0.18);
+}
+
+.d20-ink {
+  background:
+    linear-gradient(145deg, rgba(34, 211, 238, 0.18), transparent 38%),
+    linear-gradient(315deg, rgba(215, 255, 63, 0.13), transparent 36%), #0b1020;
+}
+
+@media (min-width: 1024px) {
+  html[data-admin-observability-state="open"] .admin-shell {
+    padding-right: 416px;
+  }
+
+  html[data-admin-observability-state="closed"] .admin-shell {
+    padding-right: 72px;
+  }
 }

@@ -3,6 +3,23 @@ import { appendCodexRunEvent, createCodexRun, summarizeCodexRun } from "@/domain
 import { createCommerceDatabase } from "@/persistence/database";
 
 describe("Codex run observability", () => {
+  it("summarizes a run with no events as pending", () => {
+    const run = createCodexRun({
+      id: "run-pending",
+      question: "Will Codex answer?",
+      createdByUserId: "demo-manager",
+      createdAt: new Date("2026-05-23T10:00:00.000Z"),
+    });
+
+    expect(summarizeCodexRun(run, [])).toEqual({
+      id: "run-pending",
+      question: "Will Codex answer?",
+      status: "pending",
+      latestMessage: null,
+      traceId: null,
+    });
+  });
+
   it("orders persisted run events and exposes a terminal summary", () => {
     const database = createCommerceDatabase();
 
@@ -52,6 +69,36 @@ describe("Codex run observability", () => {
         latestMessage: "Trace saved",
         traceId: "trace-1",
       });
+    } finally {
+      database.close();
+    }
+  });
+
+  it("lists recent persisted Codex runs newest first for replay surfaces", () => {
+    const database = createCommerceDatabase();
+
+    try {
+      database.saveCodexRun(
+        createCodexRun({
+          id: "older-run",
+          question: "Storefront section rewrite",
+          createdByUserId: "demo-operator",
+          createdAt: new Date("2026-05-23T10:00:00.000Z"),
+        }),
+      );
+      database.saveCodexRun(
+        createCodexRun({
+          id: "newer-run",
+          question: "Storefront master text rewrite",
+          createdByUserId: "demo-operator",
+          createdAt: new Date("2026-05-23T10:05:00.000Z"),
+        }),
+      );
+
+      expect(database.listRecentCodexRuns(2).map((run) => run.id)).toEqual([
+        "newer-run",
+        "older-run",
+      ]);
     } finally {
       database.close();
     }

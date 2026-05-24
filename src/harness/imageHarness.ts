@@ -1,4 +1,15 @@
-import type { CampaignVisualAsset } from "@/domain/storefront";
+import { execFile } from "node:child_process";
+import { access, copyFile, mkdir } from "node:fs/promises";
+import { extname, join } from "node:path";
+import { promisify } from "node:util";
+import {
+  type CampaignVisualAsset,
+  defaultStorefrontHeroImageComposition,
+} from "@/domain/storefront";
+import {
+  type CodexAppServerImageResult,
+  runCodexAppServerImagePrompt,
+} from "@/harness/codexAppServerClient";
 
 export interface CampaignAsset {
   id: string;
@@ -13,15 +24,31 @@ export interface ImageHarness {
   readonly mode: "static" | "live";
   generateCampaignHero(input: {
     campaignId: string;
-    season: "fathers-day" | "secret-santa";
+    season?: "fathers-day" | "secret-santa";
+    eventName?: string;
     visualDirection: string;
+    composition?: CampaignVisualAsset["composition"];
   }): Promise<CampaignVisualAsset>;
 }
+
+export type CodexAppServerImageRunner = (input: {
+  prompt: string;
+}) => Promise<CodexAppServerImageResult>;
+
+export type GeneratedImageOptimizer = (input: {
+  publicDirectory: string;
+  sourcePath: string;
+  targetDirectory: string;
+  targetSlugBase: string;
+}) => Promise<string | null>;
+
+const execFileAsync = promisify(execFile);
 
 export const staticImageHarness: ImageHarness = {
   mode: "static",
   async generateCampaignHero(input) {
-    const isSecretSanta = input.season === "secret-santa";
+    const eventSlug = slugify(input.eventName ?? input.season ?? "event");
+    const isSecretSanta = input.season === "secret-santa" || eventSlug.includes("secret-santa");
 
     return {
       id: `${input.campaignId}-hero-asset`,
@@ -33,7 +60,149 @@ export const staticImageHarness: ImageHarness = {
       source: "static",
       path: isSecretSanta
         ? "/static-assets/secret-santa-hero.svg"
-        : "/static-assets/fathers-day-hero.svg",
+        : input.eventName
+          ? "/static-assets/generated-event-hero.svg"
+          : "/static-assets/fathers-day-hero.svg",
+      composition: input.composition ?? defaultStorefrontHeroImageComposition,
     };
   },
 };
+
+export const generatedEventImageHarness: ImageHarness = {
+  mode: "live",
+  generateCampaignHero: createCodexAppServerImageHarness().generateCampaignHero,
+};
+
+export function createCodexAppServerImageHarness(
+  input: {
+    publicDirectory?: string;
+    runImagePrompt?: CodexAppServerImageRunner;
+    optimizeGeneratedImage?: GeneratedImageOptimizer;
+  } = {},
+): ImageHarness {
+  const publicDirectory = input.publicDirectory ?? join(process.cwd(), "public");
+  const runImagePrompt = input.runImagePrompt ?? runCodexAppServerImagePrompt;
+  const optimizeGeneratedImage = input.optimizeGeneratedImage ?? optimizeGeneratedHeroImage;
+
+  return {
+    mode: "live",
+    async generateCampaignHero(heroInput) {
+      const imagePrompt = buildStorefrontHeroImagePrompt(heroInput);
+      const generatedImage = await runImagePrompt({ prompt: imagePrompt });
+      const publicPath = await copyGeneratedImageToPublicAssets({
+        eventName: heroInput.eventName ?? heroInput.season ?? heroInput.campaignId,
+        optimizeGeneratedImage,
+        publicDirectory,
+        sourcePath: generatedImage.savedPath,
+      });
+
+      return {
+        id: `${heroInput.campaignId}-hero-asset`,
+        campaignId: heroInput.campaignId,
+        prompt: generatedImage.revisedPrompt ?? heroInput.visualDirection,
+        alt: `${heroInput.eventName ?? "Generated campaign"} hero visual for Atlas & Co.`,
+        source: "generated",
+        path: publicPath,
+        composition: heroInput.composition ?? defaultStorefrontHeroImageComposition,
+      };
+    },
+  };
+}
+
+async function copyGeneratedImageToPublicAssets(input: {
+  eventName: string;
+  optimizeGeneratedImage: GeneratedImageOptimizer;
+  publicDirectory: string;
+  sourcePath: string;
+}): Promise<string> {
+  const targetDirectory = join(input.publicDirectory, "generated-assets");
+  const targetSlugBase = `${slugify(input.eventName)}-storefront-hero`;
+  await mkdir(targetDirectory, { recursive: true });
+
+  const optimizedPath = await input.optimizeGeneratedImage({
+    publicDirectory: input.publicDirectory,
+    sourcePath: input.sourcePath,
+    targetDirectory,
+    targetSlugBase,
+  });
+
+  if (optimizedPath) {
+    return optimizedPath;
+  }
+
+  const extension = extname(input.sourcePath) || ".png";
+  const filename = await nextAvailableAssetFilename(targetDirectory, targetSlugBase, extension);
+  await copyFile(input.sourcePath, join(targetDirectory, filename));
+
+  return `/generated-assets/${filename}`;
+}
+
+async function optimizeGeneratedHeroImage(input: {
+  targetDirectory: string;
+  targetSlugBase: string;
+  sourcePath: string;
+}): Promise<string | null> {
+  const filename = await nextAvailableAssetFilename(
+    input.targetDirectory,
+    input.targetSlugBase,
+    ".jpg",
+  );
+  const targetPath = join(input.targetDirectory, filename);
+
+  try {
+    await mkdir(input.targetDirectory, { recursive: true });
+    await execFileAsync("sips", ["-s", "format", "jpeg", input.sourcePath, "--out", targetPath]);
+    return `/generated-assets/${filename}`;
+  } catch {
+    return null;
+  }
+}
+
+async function nextAvailableAssetFilename(
+  targetDirectory: string,
+  slugBase: string,
+  extension: string,
+): Promise<string> {
+  let index = 1;
+
+  while (true) {
+    const filename = index === 1 ? `${slugBase}${extension}` : `${slugBase}-${index}${extension}`;
+
+    try {
+      await access(join(targetDirectory, filename));
+      index += 1;
+    } catch {
+      return filename;
+    }
+  }
+}
+
+function buildStorefrontHeroImagePrompt(input: {
+  campaignId: string;
+  season?: "fathers-day" | "secret-santa";
+  eventName?: string;
+  visualDirection: string;
+  composition?: CampaignVisualAsset["composition"];
+}): string {
+  return [
+    "Generate exactly one ecommerce storefront hero image for Atlas & Co.",
+    `Theme or event: ${input.eventName ?? input.season ?? input.campaignId}`,
+    `Creative direction: ${input.visualDirection}`,
+    `Final image slot: ${(input.composition ?? defaultStorefrontHeroImageComposition).slot}`,
+    `Target aspect ratio: ${(input.composition ?? defaultStorefrontHeroImageComposition).aspectRatio}`,
+    `Preferred focal point: ${(input.composition ?? defaultStorefrontHeroImageComposition).focalPoint}`,
+    `Safe copy zone: ${(input.composition ?? defaultStorefrontHeroImageComposition).safeArea}`,
+    `Suggested crop anchor: ${(input.composition ?? defaultStorefrontHeroImageComposition).objectPosition}`,
+    "Composition: final usage is a wide cropped storefront hero, keep generous negative space for overlaid copy on the left, and place the main product cluster inside the preserved right-side area.",
+    "Cropping constraints: avoid placing key objects, handles, or packaging edges near the top, far left, or far right trim lines.",
+    "Style: polished editorial retail photography, realistic useful gift products, crisp natural lighting, visually matched to the requested theme.",
+    "Constraints: no readable text, no logos, no watermarks, no people, no distorted products.",
+  ].join("\n");
+}
+
+function slugify(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
