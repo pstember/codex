@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { adaptStorefrontForEvent } from "@/application/storefrontAdaptation";
 import {
   type CampaignVisualAsset,
   defaultStorefrontHeroImageComposition,
   type StorefrontConfig,
 } from "@/domain/storefront";
-import { adaptStorefrontForEvent } from "@/domain/storefrontAdaptation";
 import { products } from "@/fixtures/products";
 import { baselineStorefront } from "@/fixtures/storefront";
 import type { CodexHarness } from "@/harness/codexHarness";

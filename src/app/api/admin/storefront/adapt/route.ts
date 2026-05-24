@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
+import { assertSameOriginJsonRequest } from "@/app/auth/api";
 import { requireCurrentUser } from "@/app/auth/session";
+import { adaptStorefrontForEvent } from "@/application/storefrontAdaptation";
 import { appendCodexRunEvent, createCodexRun } from "@/domain/codexRun";
-import { adaptStorefrontForEvent } from "@/domain/storefrontAdaptation";
 import { products } from "@/fixtures/products";
 import { baselineStorefront } from "@/fixtures/storefront";
 import { getCodexHarness } from "@/harness/codexHarness";
@@ -12,6 +13,12 @@ import { getAppDatabase } from "@/persistence/appDatabase";
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const requestError = assertSameOriginJsonRequest(request);
+
+  if (requestError) {
+    return requestError;
+  }
+
   const user = await requireCurrentUser("publish_storefront");
   const body = (await request.json().catch(() => ({}))) as {
     eventName?: unknown;

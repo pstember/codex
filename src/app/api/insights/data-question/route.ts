@@ -1,3 +1,4 @@
+import { assertSameOriginJsonRequest, authorizeApiRequest } from "@/app/auth/api";
 import { askDataQuestion, type DataQuestionEvent } from "@/domain/dataQuestion";
 import { commerceData } from "@/fixtures/commerce";
 import { products } from "@/fixtures/products";
@@ -6,6 +7,18 @@ import { runCodexAppServerJsonPromptWithTrace } from "@/harness/codexAppServerCl
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const requestError = assertSameOriginJsonRequest(request);
+
+  if (requestError) {
+    return requestError;
+  }
+
+  const authorization = await authorizeApiRequest("ask_deep_metrics");
+
+  if (authorization.response) {
+    return authorization.response;
+  }
+
   const body = (await request.json().catch(() => ({}))) as { message?: unknown };
   const message = typeof body.message === "string" ? body.message : "";
   const encoder = new TextEncoder();

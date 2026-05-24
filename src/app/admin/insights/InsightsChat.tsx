@@ -1,7 +1,7 @@
 "use client";
 
 import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from "react";
-import type { TestChatState } from "@/app/admin/insights/actions";
+import type { InsightChatState } from "@/app/admin/insights/actions";
 import { AdminObservabilityRail } from "@/app/components/AdminObservabilityRail";
 import type {
   CommerceMetricId,
@@ -11,9 +11,9 @@ import type {
 } from "@/domain/commerceMetrics";
 import { commerceMetricCatalog } from "@/domain/commerceMetrics";
 import type { DataQuestionEvent } from "@/domain/dataQuestion";
-import type { TestDataCatalog } from "@/domain/testDataCatalog";
+import type { SourceDataCatalog } from "@/domain/sourceDataCatalog";
 
-const initialState: TestChatState = {};
+const initialState: InsightChatState = {};
 const exampleQuestions = [
   "Which item should I promote in my next campaign?",
   "Which products should we avoid promoting because of low margin, low stock, or high returns?",
@@ -41,13 +41,13 @@ const productMetricLabels = new Map(
 type RecentRun = {
   id: string;
   message: string;
-  state: TestChatState;
-  status: TestChatState["status"] | "error";
+  state: InsightChatState;
+  status: InsightChatState["status"] | "error";
   traceEvents: DataQuestionEvent[];
 };
 
-export function InsightsChat({ dataCatalog }: { dataCatalog: TestDataCatalog }) {
-  const [state, setState] = useState<TestChatState>(initialState);
+export function InsightsChat({ dataCatalog }: { dataCatalog: SourceDataCatalog }) {
+  const [state, setState] = useState<InsightChatState>(initialState);
   const [message, setMessage] = useState("");
   const [recentRuns, setRecentRuns] = useState<RecentRun[]>([]);
   const [traceEvents, setTraceEvents] = useState<DataQuestionEvent[]>([]);
@@ -963,9 +963,9 @@ function explorerStatClassName(tone: "good" | "neutral" | "risk"): string {
 }
 
 function mergeTracePayload(
-  currentState: TestChatState,
+  currentState: InsightChatState,
   traceEvent: DataQuestionEvent,
-): TestChatState {
+): InsightChatState {
   if (!traceEvent.payload) {
     return currentState;
   }
@@ -1092,7 +1092,7 @@ function tracePayloadLabel(event: DataQuestionEvent): string {
   return "Trace detail";
 }
 
-function DataCatalogView({ catalog }: { catalog: TestDataCatalog }) {
+function DataCatalogView({ catalog }: { catalog: SourceDataCatalog }) {
   return (
     <section className="d20-card min-w-0 overflow-hidden rounded-lg border p-5 shadow-[0_18px_60px_rgba(8,13,31,0.10)] md:p-7">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
@@ -1128,7 +1128,7 @@ function DataCatalogView({ catalog }: { catalog: TestDataCatalog }) {
   );
 }
 
-function DataTable({ table }: { table: TestDataCatalog["tables"][number] }) {
+function DataTable({ table }: { table: SourceDataCatalog["tables"][number] }) {
   return (
     <details
       className="min-w-0 overflow-hidden rounded-md border border-[#d7e0f4] bg-white"
@@ -1312,7 +1312,7 @@ async function readEventStream(
   stream: ReadableStream<Uint8Array>,
   handlers: {
     onTrace: (event: DataQuestionEvent) => void;
-    onResult: (result: TestChatState) => void;
+    onResult: (result: InsightChatState) => void;
     onError: (errorMessage: string) => void;
   },
 ) {
@@ -1352,7 +1352,7 @@ async function readEventStream(
       }
 
       if (eventType === "result") {
-        handlers.onResult(parsedData as TestChatState);
+        handlers.onResult(parsedData as InsightChatState);
       }
 
       if (eventType === "error") {

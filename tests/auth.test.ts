@@ -1,4 +1,7 @@
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { AuthPanel } from "@/app/components/AuthPanel";
 import { AuthorizationError, loginWithPassword, requirePermission } from "@/domain/auth";
 import { demoStaffPasswords, demoUsers } from "@/fixtures/users";
 import { createCommerceDatabase } from "@/persistence/database";
@@ -78,5 +81,24 @@ describe("auth domain", () => {
 
     expect(() => requirePermission(operator, "publish_storefront")).not.toThrow();
     expect(() => requirePermission(operator, "ask_deep_metrics")).toThrow(AuthorizationError);
+  });
+
+  it("hides local demo credentials unless explicitly enabled", () => {
+    const previousFlag = process.env.DEMO_SHOW_CREDENTIALS;
+
+    try {
+      delete process.env.DEMO_SHOW_CREDENTIALS;
+
+      const markup = renderToStaticMarkup(createElement(AuthPanel, { currentUser: null }));
+
+      expect(markup).not.toContain(demoStaffPasswords.manager);
+      expect(markup).not.toContain("manager@demo.com /");
+    } finally {
+      if (previousFlag === undefined) {
+        delete process.env.DEMO_SHOW_CREDENTIALS;
+      } else {
+        process.env.DEMO_SHOW_CREDENTIALS = previousFlag;
+      }
+    }
   });
 });

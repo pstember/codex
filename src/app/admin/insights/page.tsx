@@ -1,7 +1,7 @@
 import { InsightsChat } from "@/app/admin/insights/InsightsChat";
 import { requireCurrentUser } from "@/app/auth/session";
 import { AppChrome } from "@/app/components/AppChrome";
-import { buildTestDataCatalog } from "@/domain/testDataCatalog";
+import { buildSourceDataCatalog } from "@/domain/sourceDataCatalog";
 import { commerceData } from "@/fixtures/commerce";
 import { products } from "@/fixtures/products";
 import {
@@ -12,7 +12,7 @@ import {
 
 export default async function InsightsPage() {
   const user = await requireCurrentUser("ask_deep_metrics");
-  const dataCatalog = buildTestDataCatalog({
+  const dataCatalog = buildSourceDataCatalog({
     commerceData,
     products,
     storefronts: [baselineStorefront, fatherDayStorefront, secretSantaStorefront],
@@ -27,7 +27,7 @@ export default async function InsightsPage() {
               Atlas prism bench
             </p>
             <h1 className="mt-3 text-4xl font-black tracking-normal md:text-6xl">
-              Data-question harness
+              Insight workbench
             </h1>
             <p className="mt-4 max-w-2xl text-sm leading-6 text-[#dbeafe]">
               A working lab for asking open Atlas commerce questions through generated GraphQL,

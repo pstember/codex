@@ -6,7 +6,7 @@ import { commerceData } from "@/fixtures/commerce";
 import { products } from "@/fixtures/products";
 import { runCodexAppServerJsonPrompt } from "@/harness/codexAppServerClient";
 
-export type TestChatState = {
+export type InsightChatState = {
   caveats?: string[];
   evidence?: string[];
   error?: string;
@@ -28,10 +28,10 @@ export type TestChatState = {
   validationErrors?: string[];
 };
 
-export async function sendTestChatMessageAction(
-  _previousState: TestChatState,
+export async function sendInsightChatMessageAction(
+  _previousState: InsightChatState,
   formData: FormData,
-): Promise<TestChatState> {
+): Promise<InsightChatState> {
   const message = String(formData.get("message") ?? "");
 
   try {

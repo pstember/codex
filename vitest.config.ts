@@ -15,6 +15,7 @@ export default defineConfig({
         statements: 80,
       },
       include: [
+        "src/application/**/*.ts",
         "src/domain/**/*.ts",
         "src/fixtures/**/*.ts",
         "src/harness/**/*.ts",

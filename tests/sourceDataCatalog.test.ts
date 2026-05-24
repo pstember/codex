@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildTestDataCatalog } from "@/domain/testDataCatalog";
+import { buildSourceDataCatalog } from "@/domain/sourceDataCatalog";
 import { commerceData } from "@/fixtures/commerce";
 import { products } from "@/fixtures/products";
 import {
@@ -8,9 +8,9 @@ import {
   secretSantaStorefront,
 } from "@/fixtures/storefront";
 
-describe("test data catalog", () => {
-  it("groups every seeded data collection for the /insights data browser", () => {
-    const catalog = buildTestDataCatalog({
+describe("source data catalog", () => {
+  it("groups every seeded data collection for the Insight source-data browser", () => {
+    const catalog = buildSourceDataCatalog({
       commerceData,
       products,
       storefronts: [baselineStorefront, fatherDayStorefront, secretSantaStorefront],

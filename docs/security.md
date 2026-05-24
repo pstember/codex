@@ -1,34 +1,47 @@
 # Security
 
-## Baseline
+## Security Model
 
-This is a local demo app, but it should model real security boundaries clearly.
+Commerce Copilot Studio is an open-source local demo. It should still model clear security boundaries because it streams prompts, generated responses, commerce data, and generated asset metadata.
 
-## Requirements
+## Implemented Protections
 
-- Role authorization must be tested for Manager, Analyst, and Operator staff; Guests stay anonymous on the public storefront.
-- Server-side validation is required for all Codex and image harness outputs.
-- Generated output must never be executed as arbitrary code.
-- Secrets must not be stored in Codex traces, image metadata, fixtures, or client bundles.
-- Dependency advisories must be tracked with `npm audit`; low-risk issues can be deferred only when documented here.
+- Staff pages require server-side role checks.
+- Codex route handlers require route-level authentication and permissions.
+- State-changing JSON routes reject cross-origin requests and non-JSON content types.
+- Session cookies are HTTP-only, SameSite Lax, and secure when `NODE_ENV=production`.
+- Passwords for seeded staff users are stored as Node `scrypt` hashes.
+- Generated GraphQL is parsed and validated before execution.
+- Generated storefront configs are validated against schema, section order, product references, palette tokens, and visual metadata before publishing.
+- Generated image source files are validated before being copied into public generated assets.
+- Codex run-event streams require staff trace permission.
+- Baseline browser security headers are configured in `next.config.ts`.
 
-## Current Status
+## Demo-Only Boundaries
 
-- Phase 1 added lightweight demo auth with HTTP-only session cookies, SQLite-backed sessions, and Node `scrypt` password hashes for seeded Manager, Analyst, and Operator staff users.
-- Guests do not have accounts; `/` is the public storefront and `/store` redirects there for compatibility.
-- Staff routes/actions are protected by server-side permission checks.
-- Codex App Server is available through the local Codex CLI. Default `stdio://` use requires no localhost listener; optional `ws://127.0.0.1:<port>` development mode should bind to loopback only unless a separate security review approves remote access.
-- Runtime Codex generation uses a spawned `codex app-server` stdio process with ephemeral read-only threads, `approvalPolicy: "never"`, and server-side schema validation of generated JSON before persistence/rendering. Static and fixture harnesses are reserved for tests.
-- Custom Manager questions run only through the fixed GraphQL schema; generated GraphQL is parsed and validated before execution against seeded commerce data.
-- No live App Server integration secrets are required yet.
-- `npm run security:audit` was rerun on 2026-05-23.
-- Audit currently reports 2 moderate advisories from Next's nested `postcss@8.4.31`.
-- `npm audit fix --force` would install `next@9.3.3`, which is a breaking downgrade, so this is documented and deferred rather than applied.
-- Storefront visual adaptation outputs are still validated as data: Codex-generated copy, palette, section config, and image metadata must pass server-side schema/product-reference checks before publishing.
-- Live storefront images are generated through Codex App Server and copied into ignored `public/generated-assets/`; the app persists only prompt/alt/source metadata and the public asset path.
+- Demo credentials are local-only and hidden unless `DEMO_SHOW_CREDENTIALS=true`.
+- The auth system is intentionally lightweight and should be replaced before production deployment.
+- Fixture data is fictional but includes customer/order-like records to make the Insight workflow realistic.
+- Generated images are stored in local ignored runtime assets under `public/generated-assets/`.
 
-## Deferred Concerns
+## Production Requirements Before Real Use
 
-- Production-grade auth provider selection remains intentionally deferred. The current role-based demo auth is not intended as production auth.
-- Production image-generation policy, moderation, retention, and storage review remains deferred; current live generation is local-demo scoped through Codex App Server.
-- Next/PostCSS audit remediation is deferred until a compatible current Next release updates its nested PostCSS dependency or a safe override strategy is confirmed.
+- Replace demo auth with a production identity provider.
+- Add rate limiting for Codex-backed routes.
+- Use managed secret storage and deployment-specific environment controls.
+- Add production logging/redaction policy for prompts, responses, and trace payloads.
+- Define image-generation moderation, retention, and storage policy.
+- Review CSP for the final deployment platform and remove development-only allowances where possible.
+- Put a reverse proxy or managed edge in front of a self-hosted deployment.
+
+## Audit Commands
+
+```sh
+npm run security:audit
+npm run deps:outdated
+npm run lint
+npm run typecheck
+npm test
+```
+
+At the time of this delivery pass, `npm audit` may report moderate advisories from Next's nested PostCSS dependency. Do not apply a force fix that downgrades Next; wait for a compatible upstream patch or apply a reviewed override.

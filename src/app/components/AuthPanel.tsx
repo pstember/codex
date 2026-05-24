@@ -26,6 +26,8 @@ const demoStaffCredentials = [
 ];
 
 export function AuthPanel({ currentUser, loginError = false }: AuthPanelProps) {
+  const showDemoCredentials = process.env.DEMO_SHOW_CREDENTIALS === "true";
+
   return (
     <div className="rounded-lg border border-neutral-300 bg-white p-6">
       <p className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Staff access</p>
@@ -79,14 +81,16 @@ export function AuthPanel({ currentUser, loginError = false }: AuthPanelProps) {
               Sign in
             </button>
           </form>
-          <div className="grid gap-2 rounded-md border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-700">
-            {demoStaffCredentials.map((credential) => (
-              <p key={credential.email}>
-                <span className="font-semibold">{credential.role}:</span> {credential.email} /{" "}
-                {credential.password}
-              </p>
-            ))}
-          </div>
+          {showDemoCredentials ? (
+            <div className="grid gap-2 rounded-md border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-700">
+              {demoStaffCredentials.map((credential) => (
+                <p key={credential.email}>
+                  <span className="font-semibold">{credential.role}:</span> {credential.email} /{" "}
+                  {credential.password}
+                </p>
+              ))}
+            </div>
+          ) : null}
         </div>
       )}
     </div>

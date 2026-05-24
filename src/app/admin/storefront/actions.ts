@@ -5,14 +5,14 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { requireCurrentUser, storefrontPreviewCookieName } from "@/app/auth/session";
+import { regenerateStorefrontWorkbenchTextWithTrace } from "@/application/storefrontWorkbench";
 import { requirePermission } from "@/domain/auth";
 import { appendCodexRunEvent, createCodexRun } from "@/domain/codexRun";
 import {
   getStorefrontSectionLabel,
   resolveStorefrontSectionIntent,
   type StorefrontConfig,
-  storefrontConfigSchema,
-  validateStorefrontProductReferences,
+  validateStorefrontConfigForProducts,
 } from "@/domain/storefront";
 import type { GeneratedStorefrontConfig } from "@/domain/storefrontDraft";
 import {
@@ -21,7 +21,6 @@ import {
   publishStorefrontConfig,
   rollbackStorefrontVersion,
 } from "@/domain/storefrontPublishing";
-import { regenerateStorefrontWorkbenchTextWithTrace } from "@/domain/storefrontWorkbench";
 import { products } from "@/fixtures/products";
 import { baselineStorefront } from "@/fixtures/storefront";
 import { getCodexHarness } from "@/harness/codexHarness";
@@ -850,23 +849,7 @@ function saveStorefrontReplayEvent(input: {
 }
 
 function validateEditableStorefrontConfig(config: StorefrontConfig) {
-  const parsed = storefrontConfigSchema.safeParse(config);
-  const errors = parsed.success
-    ? []
-    : parsed.error.issues.map((issue) => `Invalid storefront config: ${issue.message}`);
-  const validProductIds = new Set(products.map((product) => product.id));
-
-  for (const productId of validateStorefrontProductReferences(config, validProductIds)) {
-    errors.push(`Storefront section references unknown product "${productId}".`);
-  }
-
-  if (config.visualAsset.campaignId !== config.campaignId) {
-    errors.push(
-      `Storefront visual asset campaign "${config.visualAsset.campaignId}" does not match storefront campaign "${config.campaignId}".`,
-    );
-  }
-
-  return errors;
+  return validateStorefrontConfigForProducts(config, products);
 }
 
 function resolveDraftStatus(

@@ -1,3 +1,4 @@
+import { authorizeApiRequest } from "@/app/auth/api";
 import { getAppDatabase } from "@/persistence/appDatabase";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +11,12 @@ export async function GET(
     params: Promise<{ runId: string }>;
   },
 ) {
+  const authorization = await authorizeApiRequest("view_codex_traces");
+
+  if (authorization.response) {
+    return authorization.response;
+  }
+
   const { runId } = await params;
   const events = getAppDatabase().listCodexRunEvents(runId);
   const encoder = new TextEncoder();

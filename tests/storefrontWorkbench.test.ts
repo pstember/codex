@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { regenerateStorefrontWorkbenchText } from "@/domain/storefrontWorkbench";
+import { regenerateStorefrontWorkbenchText } from "@/application/storefrontWorkbench";
 import { baselineStorefront } from "@/fixtures/storefront";
 import type { CodexHarness } from "@/harness/codexHarness";
 import { fixtureCodexHarness } from "./support/fixtureCodexHarness";

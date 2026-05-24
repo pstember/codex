@@ -1,56 +1,51 @@
 # Agent Guide
 
-This is a greenfield project. The user guides goals, taste, and priorities. The assistant should act as product manager, architect, principal engineer, and implementation partner unless told otherwise.
+Commerce Copilot Studio is a clean open-source demo, not a build journal. Keep the repo easy for a new contributor to run, audit, and extend.
 
 ## Before Significant Work
 
-Read this file and `.brain/README.md`.
+Read:
 
-If the work changes product direction, architecture, constraints, or repeatable lessons, update `.brain/` with a concise dated entry.
+- `README.md`
+- `docs/quickstart.md`
+- `docs/architecture.md`
+- `docs/testing.md`
+- `docs/security.md`
+
+If a change affects product behavior, architecture, security posture, setup, or repeatable contributor workflow, update the relevant public doc directly. Do not add private journal or archive files.
 
 ## Working Principles
 
 - Prefer clear product intent before implementation.
 - Ask clarifying questions when instructions are unclear or the goal is uncertain.
-- Write product copy for real end users, not for the project owner, agents, demos, or hackathon judges; keep it realistic and production-plausible.
-- Use test-first development for behavior changes unless the user explicitly waives it.
-- Keep solutions simple. Do not add abstractions before there is a real need.
+- Write product copy for real end users, not for project owners, agents, demos, or judges.
+- Use test-first development for durable behavior unless explicitly waived.
+- Keep solutions simple and avoid abstractions before there is a real need.
 - Remove meaningful duplication when it improves clarity or reduces maintenance cost.
-- Preserve user work. Do not revert unrelated changes.
-- Commit completed, tested slices as you go so changes remain easy to inspect and revert.
-- Avoid storing secrets, credentials, personal tokens, or transient logs in the repo.
-- If browser/runtime assets such as Playwright browsers are relevant to verification, install them as needed instead of stopping the task; mention the install in the session summary.
+- Preserve user work and never revert unrelated changes.
+- Avoid storing secrets, credentials, personal tokens, sessions, generated traces, or transient logs in the repo.
 
 ## Project Skills
 
 Project-local skills live in `.codex/skills/`.
 
-- Use `.codex/skills/behavioural-tdd/SKILL.md` when the user asks for TDD, test-first development, red-green-refactor, behavioral tests, or failing tests first. This is also the default quality bar for new behavior: public behavior tests, KISS in implementation, and DRY in refactor.
+- Use `.codex/skills/behavioural-tdd/SKILL.md` for behavior changes, bug fixes, and high-quality implementation work.
 - Use `.codex/skills/caveman/SKILL.md` only when the user asks for Caveman-style or extremely terse communication.
 
-## Memory
+## Product Summary
 
-Use `.brain/decisions.md` for product, architecture, and implementation decisions.
+Commerce Copilot Studio shows how Codex can support an ecommerce team:
 
-Use `.brain/learnings.md` for durable discoveries, constraints, and lessons that should affect future work.
+- Public Storefront: anonymous Atlas & Co. shopping experience with searchable fixture products and local cart behavior.
+- Staff Admin: role-gated entry for Manager, Analyst, and Operator workflows.
+- Insight: Codex turns natural-language commerce questions into validated GraphQL, executes against seeded data, and answers from compact evidence.
+- Storefront Studio: Codex creates event drafts with copy, palette, product placement, and hero-image metadata that staff can preview, review, publish, and compare.
 
-Use `.brain/open-questions.md` for unresolved questions that could change the product or implementation.
+## Non-Negotiables
 
-## Commerce Copilot Studio
-
-Project plan and session handoff live in `docs/`. Before changing app code, read `docs/master-plan.md`, `docs/progress.md`, `docs/decisions.md`, `docs/testing.md`, `docs/security.md`, `docs/codex-harness.md`, and `docs/demo-script.md`.
-
-Hackathon evaluation rubric:
-
-- Working application: features may be minimal, but they should feel fully baked and avoid broken or confusing UX.
-- Creativity: the app should have a clear wow factor and be interesting enough to gain attention on social media.
-- Code quality: code should be easy to understand, maintainable, and suitable for open sourcing.
-- Communication: the app demo or video should explain a technical topic in an engaging, accessible way.
-
-Non-negotiables:
-
-- Work in small, tested phases and update `docs/progress.md` before ending a session.
-- Use TDD for durable behavior and keep an 80% coverage target for core app logic.
-- Use latest stable dependency versions; run `npm outdated` when checking freshness.
 - Use Tailwind CSS v4, Biome, strict TypeScript, Vitest, Playwright, and SQLite persistence.
-- Keep generated Codex/image output constrained, fixture-backed, and server-validated.
+- Keep generated Codex and image output constrained, server-validated, and treated as data only.
+- Keep runtime state narrow: demo users, sessions, storefront drafts, published versions, and Codex run events.
+- Keep TypeScript fixtures as the analytics source of truth.
+- Maintain the 80% coverage target for core app logic.
+- Run dependency freshness and security audit checks before release-oriented handoff.

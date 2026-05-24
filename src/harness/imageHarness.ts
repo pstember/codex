@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
-import { access, copyFile, mkdir } from "node:fs/promises";
-import { extname, join } from "node:path";
+import { access, copyFile, mkdir, open, stat } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join, resolve } from "node:path";
 import { promisify } from "node:util";
 import {
   type CampaignVisualAsset,
@@ -43,6 +44,7 @@ export type GeneratedImageOptimizer = (input: {
 }) => Promise<string | null>;
 
 const execFileAsync = promisify(execFile);
+const maxGeneratedImageBytes = 10 * 1024 * 1024;
 
 export const staticImageHarness: ImageHarness = {
   mode: "static",
@@ -76,11 +78,17 @@ export const generatedEventImageHarness: ImageHarness = {
 export function createCodexAppServerImageHarness(
   input: {
     publicDirectory?: string;
+    allowedSourceDirectories?: string[];
     runImagePrompt?: CodexAppServerImageRunner;
     optimizeGeneratedImage?: GeneratedImageOptimizer;
   } = {},
 ): ImageHarness {
   const publicDirectory = input.publicDirectory ?? join(process.cwd(), "public");
+  const allowedSourceDirectories = (
+    input.allowedSourceDirectories ?? [
+      join(process.env.CODEX_HOME ?? join(homedir(), ".codex"), "generated_images"),
+    ]
+  ).map((directory) => resolve(directory));
   const runImagePrompt = input.runImagePrompt ?? runCodexAppServerImagePrompt;
   const optimizeGeneratedImage = input.optimizeGeneratedImage ?? optimizeGeneratedHeroImage;
 
@@ -91,6 +99,7 @@ export function createCodexAppServerImageHarness(
       const generatedImage = await runImagePrompt({ prompt: imagePrompt });
       const publicPath = await copyGeneratedImageToPublicAssets({
         eventName: heroInput.eventName ?? heroInput.season ?? heroInput.campaignId,
+        allowedSourceDirectories,
         optimizeGeneratedImage,
         publicDirectory,
         sourcePath: generatedImage.savedPath,
@@ -110,6 +119,7 @@ export function createCodexAppServerImageHarness(
 }
 
 async function copyGeneratedImageToPublicAssets(input: {
+  allowedSourceDirectories?: string[];
   eventName: string;
   optimizeGeneratedImage: GeneratedImageOptimizer;
   publicDirectory: string;
@@ -117,6 +127,10 @@ async function copyGeneratedImageToPublicAssets(input: {
 }): Promise<string> {
   const targetDirectory = join(input.publicDirectory, "generated-assets");
   const targetSlugBase = `${slugify(input.eventName)}-storefront-hero`;
+  const extension = await assertValidGeneratedImage(
+    input.sourcePath,
+    input.allowedSourceDirectories,
+  );
   await mkdir(targetDirectory, { recursive: true });
 
   const optimizedPath = await input.optimizeGeneratedImage({
@@ -130,11 +144,88 @@ async function copyGeneratedImageToPublicAssets(input: {
     return optimizedPath;
   }
 
-  const extension = extname(input.sourcePath) || ".png";
   const filename = await nextAvailableAssetFilename(targetDirectory, targetSlugBase, extension);
   await copyFile(input.sourcePath, join(targetDirectory, filename));
 
   return `/generated-assets/${filename}`;
+}
+
+async function assertValidGeneratedImage(
+  sourcePath: string,
+  allowedSourceDirectories: string[] | undefined,
+): Promise<string> {
+  const resolvedSourcePath = resolve(sourcePath);
+
+  if (
+    allowedSourceDirectories &&
+    !allowedSourceDirectories.some((directory) =>
+      isPathInsideDirectory(resolvedSourcePath, directory),
+    )
+  ) {
+    throw new Error(
+      "Codex App Server returned an image outside the allowed generated-image directory.",
+    );
+  }
+
+  const sourceStats = await stat(resolvedSourcePath);
+
+  if (!sourceStats.isFile()) {
+    throw new Error("Codex App Server returned a generated image path that is not a file.");
+  }
+
+  if (sourceStats.size > maxGeneratedImageBytes) {
+    throw new Error("Codex App Server returned a generated image that is too large.");
+  }
+
+  const file = await open(resolvedSourcePath, "r");
+
+  try {
+    const buffer = Buffer.alloc(12);
+    const { bytesRead } = await file.read(buffer, 0, buffer.length, 0);
+    const imageExtension = detectImageExtension(buffer.subarray(0, bytesRead));
+
+    if (!imageExtension) {
+      throw new Error("Codex App Server returned a non-image file.");
+    }
+
+    return imageExtension;
+  } finally {
+    await file.close();
+  }
+}
+
+function isPathInsideDirectory(path: string, directory: string): boolean {
+  return path === directory || path.startsWith(`${directory}/`);
+}
+
+function detectImageExtension(bytes: Buffer): string | null {
+  if (
+    bytes.length >= 8 &&
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47 &&
+    bytes[4] === 0x0d &&
+    bytes[5] === 0x0a &&
+    bytes[6] === 0x1a &&
+    bytes[7] === 0x0a
+  ) {
+    return ".png";
+  }
+
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return ".jpg";
+  }
+
+  if (
+    bytes.length >= 12 &&
+    bytes.subarray(0, 4).toString("ascii") === "RIFF" &&
+    bytes.subarray(8, 12).toString("ascii") === "WEBP"
+  ) {
+    return ".webp";
+  }
+
+  return null;
 }
 
 async function optimizeGeneratedHeroImage(input: {

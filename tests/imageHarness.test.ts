@@ -39,9 +39,10 @@ describe("static image harness", () => {
     const sourceDirectory = await mkdtemp(join(tmpdir(), "codex-source-image-"));
     const publicDirectory = await mkdtemp(join(tmpdir(), "codex-public-assets-"));
     const sourcePath = join(sourceDirectory, "ig_theme.png");
-    await writeFile(sourcePath, "fake png bytes");
+    await writeFile(sourcePath, pngBytes);
 
     const harness = createCodexAppServerImageHarness({
+      allowedSourceDirectories: [sourceDirectory],
       publicDirectory,
       runImagePrompt: async (input) => ({
         prompt: input.prompt,
@@ -67,20 +68,18 @@ describe("static image harness", () => {
       composition: defaultStorefrontHeroImageComposition,
     });
     await expect(
-      readFile(
-        join(publicDirectory, "generated-assets", "launch-week-storefront-hero.png"),
-        "utf8",
-      ),
-    ).resolves.toBe("fake png bytes");
+      readFile(join(publicDirectory, "generated-assets", "launch-week-storefront-hero.png")),
+    ).resolves.toEqual(pngBytes);
   });
 
   it("uses an optimized generated image path when conversion succeeds", async () => {
     const sourceDirectory = await mkdtemp(join(tmpdir(), "codex-source-image-"));
     const publicDirectory = await mkdtemp(join(tmpdir(), "codex-public-assets-"));
     const sourcePath = join(sourceDirectory, "ig_theme.png");
-    await writeFile(sourcePath, "fake png bytes");
+    await writeFile(sourcePath, pngBytes);
 
     const harness = createCodexAppServerImageHarness({
+      allowedSourceDirectories: [sourceDirectory],
       publicDirectory,
       optimizeGeneratedImage: async (input) => {
         await writeFile(join(input.targetDirectory, `${input.targetSlugBase}.jpg`), "jpeg bytes");
@@ -113,9 +112,10 @@ describe("static image harness", () => {
     const sourceDirectory = await mkdtemp(join(tmpdir(), "codex-source-image-"));
     const publicDirectory = await mkdtemp(join(tmpdir(), "codex-public-assets-"));
     const sourcePath = join(sourceDirectory, "ig_campaign.png");
-    await writeFile(sourcePath, "campaign image bytes");
+    await writeFile(sourcePath, pngBytes);
 
     const harness = createCodexAppServerImageHarness({
+      allowedSourceDirectories: [sourceDirectory],
       publicDirectory,
       runImagePrompt: async (input) => ({
         prompt: input.prompt,
@@ -139,7 +139,7 @@ describe("static image harness", () => {
     const sourceDirectory = await mkdtemp(join(tmpdir(), "codex-source-image-"));
     const publicDirectory = await mkdtemp(join(tmpdir(), "codex-public-assets-"));
     const sourcePath = join(sourceDirectory, "ig_campaign.png");
-    await writeFile(sourcePath, "campaign image bytes");
+    await writeFile(sourcePath, pngBytes);
     await mkdir(join(publicDirectory, "generated-assets"), { recursive: true });
     await writeFile(
       join(publicDirectory, "generated-assets", "event-summer-sale-storefront-hero.png"),
@@ -147,6 +147,7 @@ describe("static image harness", () => {
     );
 
     const harness = createCodexAppServerImageHarness({
+      allowedSourceDirectories: [sourceDirectory],
       publicDirectory,
       runImagePrompt: async (input) => ({
         prompt: input.prompt,
@@ -168,9 +169,10 @@ describe("static image harness", () => {
     const sourceDirectory = await mkdtemp(join(tmpdir(), "codex-source-image-"));
     const publicDirectory = await mkdtemp(join(tmpdir(), "codex-public-assets-"));
     const sourcePath = join(sourceDirectory, "ig_prompt.png");
-    await writeFile(sourcePath, "prompt image bytes");
+    await writeFile(sourcePath, pngBytes);
 
     const harness = createCodexAppServerImageHarness({
+      allowedSourceDirectories: [sourceDirectory],
       publicDirectory,
       runImagePrompt: async (input) => {
         sentPrompt = input.prompt;
@@ -194,4 +196,33 @@ describe("static image harness", () => {
     expect(sentPrompt).toContain("Safe copy zone: copy-left-half");
     expect(sentPrompt).toContain("final usage is a wide cropped storefront hero");
   });
+
+  it("rejects non-image App Server saved paths before copying them into public assets", async () => {
+    const sourceDirectory = await mkdtemp(join(tmpdir(), "codex-source-image-"));
+    const publicDirectory = await mkdtemp(join(tmpdir(), "codex-public-assets-"));
+    const sourcePath = join(sourceDirectory, "not-an-image.txt");
+    await writeFile(sourcePath, "DATABASE_URL=file:local-secret");
+
+    const harness = createCodexAppServerImageHarness({
+      allowedSourceDirectories: [sourceDirectory],
+      publicDirectory,
+      runImagePrompt: async (input) => ({
+        prompt: input.prompt,
+        revisedPrompt: null,
+        savedPath: sourcePath,
+      }),
+    });
+
+    await expect(
+      harness.generateCampaignHero({
+        campaignId: "event-launch-week",
+        eventName: "Launch Week",
+        visualDirection: "Bright launch-week gifts on a clean table.",
+      }),
+    ).rejects.toThrow("Codex App Server returned a non-image file.");
+  });
 });
+
+const pngBytes = Buffer.from([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+]);

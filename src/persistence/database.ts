@@ -5,6 +5,7 @@ import {
   type CampaignVisualAsset,
   hydrateLegacyStorefrontSectionIntents,
   type StorefrontConfig,
+  storefrontConfigSchema,
 } from "@/domain/storefront";
 import type { GeneratedStorefrontConfig } from "@/domain/storefrontDraft";
 import type { PublishedStorefrontVersion } from "@/domain/storefrontPublishing";
@@ -341,11 +342,17 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
     validationErrorsJson: string;
     createdByUserId: string;
     createdAt: string;
-  }): GeneratedStorefrontConfig {
+  }): GeneratedStorefrontConfig | null {
+    const config = parseStorefrontConfigJson(row.configJson);
+
+    if (!config) {
+      return null;
+    }
+
     return {
       id: row.id,
       sourceDraftKey: row.sourceDraftKey,
-      config: parseStorefrontConfigJson(row.configJson),
+      config,
       validationStatus: row.validationStatus,
       validationErrors: JSON.parse(row.validationErrorsJson) as string[],
       createdByUserId: row.createdByUserId,
@@ -361,11 +368,17 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
     rollbackOfVersionId: string | null;
     publishedByUserId: string;
     publishedAt: string;
-  }): PublishedStorefrontVersion {
+  }): PublishedStorefrontVersion | null {
+    const config = parseStorefrontConfigJson(row.configJson);
+
+    if (!config) {
+      return null;
+    }
+
     return {
       id: row.id,
       sourceStorefrontConfigId: row.sourceStorefrontConfigId,
-      config: parseStorefrontConfigJson(row.configJson),
+      config,
       status: row.status,
       rollbackOfVersionId: row.rollbackOfVersionId,
       publishedByUserId: row.publishedByUserId,
@@ -373,8 +386,14 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
     };
   }
 
-  function parseStorefrontConfigJson(configJson: string): StorefrontConfig {
-    const config = JSON.parse(configJson) as StorefrontConfig;
+  function parseStorefrontConfigJson(configJson: string): StorefrontConfig | null {
+    let config: StorefrontConfig;
+
+    try {
+      config = JSON.parse(configJson) as StorefrontConfig;
+    } catch {
+      return null;
+    }
     const defaultComposition = {
       slot: "storefrontHeroWide",
       aspectRatio: "14 / 9",
@@ -383,7 +402,7 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
       objectPosition: "72% center",
     } as const;
 
-    return hydrateLegacyStorefrontSectionIntents({
+    const hydratedConfig = hydrateLegacyStorefrontSectionIntents({
       ...config,
       visualAsset: config.visualAsset
         ? {
@@ -395,6 +414,28 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
           }
         : fallbackVisualAssetFor(config),
     });
+
+    const parsed = storefrontConfigSchema.safeParse(hydratedConfig);
+
+    if (parsed.success) {
+      return parsed.data;
+    }
+
+    return isSupportedLegacyStorefrontConfig(hydratedConfig) ? hydratedConfig : null;
+  }
+
+  function isSupportedLegacyStorefrontConfig(config: StorefrontConfig): boolean {
+    return (
+      config.sections.length > 0 &&
+      /^#[0-9a-fA-F]{6}$/.test(config.style.accentColor) &&
+      config.sections.every(
+        (section) =>
+          section.id.length > 0 &&
+          section.title.length > 0 &&
+          Array.isArray(section.productIds) &&
+          section.productIds.length <= 3,
+      )
+    );
   }
 
   function fallbackVisualAssetFor(config: StorefrontConfig): CampaignVisualAsset {
@@ -527,7 +568,11 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
         Parameters<typeof parseStorefrontConfigRow>[0]
       >;
 
-      return rows.map(parseStorefrontConfigRow);
+      return rows.flatMap((row) => {
+        const storefrontConfig = parseStorefrontConfigRow(row);
+
+        return storefrontConfig ? [storefrontConfig] : [];
+      });
     },
     findStorefrontConfigById(id) {
       const row = findStorefrontConfig.get(id) as
@@ -568,7 +613,11 @@ export function createCommerceDatabase(path = ":memory:"): CommerceDatabase {
         Parameters<typeof parsePublishedStorefrontVersionRow>[0]
       >;
 
-      return rows.map(parsePublishedStorefrontVersionRow);
+      return rows.flatMap((row) => {
+        const version = parsePublishedStorefrontVersionRow(row);
+
+        return version ? [version] : [];
+      });
     },
     findPublishedStorefrontVersionById(id) {
       const row = findPublishedStorefrontVersion.get(id) as

@@ -2,8 +2,7 @@ import type { Product } from "@/domain/product";
 import {
   defaultStorefrontHeroImageComposition,
   type StorefrontConfig,
-  storefrontConfigSchema,
-  validateStorefrontProductReferences,
+  validateStorefrontConfigForProducts,
 } from "@/domain/storefront";
 import type { GeneratedStorefrontConfig, StorefrontConfigStore } from "@/domain/storefrontDraft";
 import type { CodexGenerationTrace, CodexHarness } from "@/harness/codexHarness";
@@ -64,7 +63,7 @@ export async function adaptStorefrontForEvent(input: {
     visualAsset,
   };
   const validationErrors = [
-    ...validateAdaptedStorefrontConfig(config, input.products),
+    ...validateStorefrontConfigForProducts(config, input.products),
     ...imageErrors,
   ];
   const storefrontConfig: GeneratedStorefrontConfig = {
@@ -85,32 +84,6 @@ export async function adaptStorefrontForEvent(input: {
   }) as GeneratedStorefrontConfig & {
     generationTrace: CodexGenerationTrace<StorefrontConfig>;
   };
-}
-
-function validateAdaptedStorefrontConfig(config: StorefrontConfig, products: Product[]): string[] {
-  const parsed = storefrontConfigSchema.safeParse(config);
-  const errors: string[] = [];
-
-  if (!parsed.success) {
-    errors.push(
-      ...parsed.error.issues.map((issue) => `Invalid storefront config: ${issue.message}`),
-    );
-  }
-
-  const validProductIds = new Set(products.map((product) => product.id));
-  const unknownProductIds = validateStorefrontProductReferences(config, validProductIds);
-
-  for (const productId of unknownProductIds) {
-    errors.push(`Storefront section references unknown product "${productId}".`);
-  }
-
-  if (config.visualAsset.campaignId !== config.campaignId) {
-    errors.push(
-      `Storefront visual asset campaign "${config.visualAsset.campaignId}" does not match storefront campaign "${config.campaignId}".`,
-    );
-  }
-
-  return errors;
 }
 
 function slugify(value: string): string {

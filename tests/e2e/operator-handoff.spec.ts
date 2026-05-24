@@ -71,7 +71,7 @@ test("Staff admin opens the insight and storefront workspaces", async ({ page })
 
   await page.getByRole("link", { name: "Insight" }).click();
   await page.waitForURL("**/admin/insights");
-  await expect(page.getByRole("heading", { name: "Data-question harness" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Insight workbench" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Codex exchange" })).toBeVisible();
   await expectPanelDockedBeside(
     page,
@@ -157,7 +157,7 @@ test("Staff admin opens the insight and storefront workspaces", async ({ page })
   await expect(page.getByText("Edit and compare")).toBeVisible();
   await expect(page.getByText("Edit current draft", { exact: true })).toBeHidden();
   await expect(page.getByText("Compare with active", { exact: true })).toHaveCount(1);
-  await expect(page.getByText("Storefront Time Machine")).toBeHidden();
+  await expect(page.getByText("Edit and compare")).toBeHidden();
   await expect(page.getByLabel("Master prompt")).toBeVisible();
   await expect(page.getByRole("button", { name: "Generate all text" })).toBeVisible();
   await expect(page.getByText(/Saves to selected draft:/)).toBeVisible();
@@ -256,8 +256,8 @@ test("Staff admin opens the insight and storefront workspaces", async ({ page })
 
   const oldInsightsResponse = await page.goto("/insights");
   expect(oldInsightsResponse?.status()).toBe(404);
-  const oldOperatorResponse = await page.goto("/operator");
-  expect(oldOperatorResponse?.status()).toBe(404);
+  const removedStorefrontRouteResponse = await page.goto("/operator");
+  expect(removedStorefrontRouteResponse?.status()).toBe(404);
   const oldManualResponse = await page.goto("/manual");
   expect(oldManualResponse?.status()).toBe(404);
 });

@@ -16,17 +16,17 @@ export type DataCatalogTable = {
   rows: Array<Record<string, string | number | boolean>>;
 };
 
-export type TestDataCatalog = {
+export type SourceDataCatalog = {
   dashboard: MetricDashboard;
   summary: DataCatalogMetric[];
   tables: DataCatalogTable[];
 };
 
-export function buildTestDataCatalog(input: {
+export function buildSourceDataCatalog(input: {
   commerceData: CommerceData;
   products: Product[];
   storefronts: StorefrontConfig[];
-}): TestDataCatalog {
+}): SourceDataCatalog {
   const orderItems = input.commerceData.orders.flatMap((order) =>
     order.items.map((item) => ({
       orderId: order.id,

@@ -1,37 +1,48 @@
 # Testing
 
-## Target
+## Quality Bar
 
-Maintain an 80% coverage target for core app logic. UI boilerplate can be excluded only when doing so is explicit and justified.
+Maintain at least 80% coverage for core application logic. Prefer behavior tests at public boundaries: domain functions, application use cases, route handlers, persistence, and user-visible flows.
 
-## Tools
+Use test-first development for durable behavior changes.
 
-- Vitest for unit and integration tests.
-- V8 coverage through `@vitest/coverage-v8`.
-- Playwright for end-to-end and visual smoke tests.
-- Biome for linting and formatting.
-- Strict TypeScript for type safety.
+## Test Commands
 
-## TDD Workflow
+```sh
+npm run lint
+npm run typecheck
+npm test
+npm run coverage
+npm run build
+npm run deps:outdated
+npm run security:audit
+npm run test:e2e
+```
 
-1. Write or update a failing test for the durable behavior.
-2. Implement the smallest useful slice.
-3. Run focused tests.
-4. Run the broader validation set before ending a phase.
-5. Update `docs/progress.md` with test, coverage, freshness, and audit status.
+## What The Suite Covers
 
-## Required Phase Checks
+- Auth, sessions, and role permissions.
+- Route-level API authorization and request hardening.
+- Commerce GraphQL validation and execution.
+- Insight question planning, evidence packing, metrics, and final answers.
+- Storefront config validation, publishing, preview, rollback, and comparison.
+- SQLite runtime persistence and fixture DB shape.
+- Codex harness schema behavior with fake runners.
+- Image harness asset validation and generated-path handling.
+- Public Storefront and Staff Admin smoke flows through Playwright.
 
-- `npm run lint`
-- `npm run typecheck`
-- `npm test`
-- `npm run coverage`
-- `npm run deps:outdated`
-- `npm run security:audit`
+## Fixture Database
 
-## Golden Paths
+Rebuild the clean packaged fixture DB with:
 
-- Manager asks the Father’s Day promotion query and receives a valid GraphQL query and recommendation shape.
-- Operator generates an event storefront draft, reviews the validated config, and publishes it.
-- Generated storefront configs only reference valid products and approved sections.
-- `npm run db:fixture` creates a clean packaged SQLite fixture without sessions, metrics traces, campaign proposals, Codex run events, or duplicated analytics fixture tables.
+```sh
+npm run db:fixture
+```
+
+The tracked fixture DB should not contain sessions, generated drafts, local Codex run events, or generated image output.
+
+## Playwright Notes
+
+Playwright starts its own isolated server and database. Do not reuse a normal development server for e2e runs, because that can write smoke-test drafts into `.data/commerce.db`.
+
+If local browser launch is blocked by OS sandbox permissions, install or run Playwright with the required local permission and record that in the verification summary.

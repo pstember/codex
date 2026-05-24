@@ -194,6 +194,34 @@ export function validateStorefrontProductReferences(
   );
 }
 
+export function validateStorefrontConfigForProducts(
+  config: StorefrontConfig,
+  products: Product[],
+): string[] {
+  const parsed = storefrontConfigSchema.safeParse(config);
+  const errors: string[] = [];
+
+  if (!parsed.success) {
+    errors.push(
+      ...parsed.error.issues.map((issue) => `Invalid storefront config: ${issue.message}`),
+    );
+  }
+
+  const validProductIds = new Set(products.map((product) => product.id));
+
+  for (const productId of validateStorefrontProductReferences(config, validProductIds)) {
+    errors.push(`Storefront section references unknown product "${productId}".`);
+  }
+
+  if (config.visualAsset.campaignId !== config.campaignId) {
+    errors.push(
+      `Storefront visual asset campaign "${config.visualAsset.campaignId}" does not match storefront campaign "${config.campaignId}".`,
+    );
+  }
+
+  return errors;
+}
+
 export function resolveStorefrontPalette(config: StorefrontConfig): StorefrontPalette {
   const fallback = {
     background: "#f9fbff",

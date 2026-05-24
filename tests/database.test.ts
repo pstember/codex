@@ -145,6 +145,85 @@ describe("commerce SQLite database", () => {
     }
   });
 
+  it("does not return storefront configs whose persisted JSON fails validation", () => {
+    const directory = mkdtempSync(join(tmpdir(), "commerce-db-invalid-config-"));
+    const databasePath = join(directory, "commerce.db");
+
+    try {
+      const database = createCommerceDatabase(databasePath);
+      database.saveStorefrontConfig({
+        id: "invalid-draft",
+        sourceDraftKey: "adaptation:invalid",
+        config: {
+          id: "invalid-storefront",
+          campaignId: "event-invalid",
+          versionName: "Invalid",
+          style: {
+            theme: "invalid",
+            accentColor: "#2563eb",
+            density: "editorial",
+          },
+          visualAsset: {
+            ...fatherDayVisualAsset,
+            campaignId: "event-invalid",
+          },
+          sections: [
+            {
+              id: "invalid-hero",
+              type: "hero",
+              sectionIntent: "heroProduct",
+              title: "Invalid hero",
+              productIds: ["portable-charcoal-grill"],
+            },
+            {
+              id: "invalid-offer",
+              type: "productRail",
+              sectionIntent: "currentOffer",
+              title: "Invalid offer",
+              productIds: ["portable-charcoal-grill"],
+            },
+            {
+              id: "invalid-spotlight",
+              type: "featuredCollection",
+              sectionIntent: "spotlight",
+              title: "Invalid spotlight",
+              productIds: ["portable-charcoal-grill"],
+            },
+          ],
+        },
+        validationStatus: "draft",
+        validationErrors: [],
+        createdByUserId: "demo-operator",
+        createdAt: new Date("2026-05-22T14:00:00.000Z"),
+      });
+      database.close();
+
+      const rawDatabase = new DatabaseSync(databasePath);
+      rawDatabase.prepare("UPDATE storefront_configs SET config_json = ? WHERE id = ?;").run(
+        JSON.stringify({
+          id: "invalid-storefront",
+          campaignId: "event-invalid",
+          versionName: "Invalid",
+          style: {
+            theme: "invalid",
+            accentColor: "not-a-color",
+            density: "editorial",
+          },
+          sections: [],
+        }),
+        "invalid-draft",
+      );
+      rawDatabase.close();
+
+      const reopenedDatabase = createCommerceDatabase(databasePath);
+      expect(reopenedDatabase.findStorefrontConfigById("invalid-draft")).toBeNull();
+      expect(reopenedDatabase.listRecentStorefrontConfigs()).toEqual([]);
+      reopenedDatabase.close();
+    } finally {
+      rmSync(directory, { force: true, recursive: true });
+    }
+  });
+
   it("persists storefront adaptation drafts with generated image metadata", () => {
     const database = createCommerceDatabase();
 
