@@ -193,7 +193,8 @@ test("public storefront version controls are only visible to storefront staff", 
   await page.getByLabel("Category").selectOption("");
   await page.getByRole("button", { name: "Next", exact: true }).click();
   await expect(page.getByText("Page 2 of")).toBeVisible();
-  await page.getByRole("button", { name: "Add to cart" }).first().click();
+  const catalog = page.locator("#catalog");
+  await catalog.getByRole("button", { name: "Add to cart" }).first().click();
   await expect(page.getByRole("button", { name: "Cart (1)" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "1 items" })).toBeVisible();
 

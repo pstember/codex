@@ -34,14 +34,17 @@ export function paginateStorefrontCatalog(
   page: number,
   pageSize = storefrontCatalogPageSize,
 ) {
-  const pageCount = Math.max(1, Math.ceil(products.length / pageSize));
-  const currentPage = Math.min(Math.max(1, page), pageCount);
-  const start = (currentPage - 1) * pageSize;
+  const safePageSize =
+    Number.isFinite(pageSize) && pageSize > 0 ? Math.floor(pageSize) : storefrontCatalogPageSize;
+  const requestedPage = Number.isFinite(page) ? Math.floor(page) : 1;
+  const pageCount = Math.max(1, Math.ceil(products.length / safePageSize));
+  const currentPage = Math.min(Math.max(1, requestedPage), pageCount);
+  const start = (currentPage - 1) * safePageSize;
 
   return {
     currentPage,
     pageCount,
-    products: products.slice(start, start + pageSize),
+    products: products.slice(start, start + safePageSize),
     totalProducts: products.length,
   };
 }

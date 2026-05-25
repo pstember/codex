@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   applyStorefrontSelectionAction,
   clearStorefrontPreviewAction,
@@ -92,6 +92,12 @@ export function PublicStorefrontExperience({
     [cart, products],
   );
   const cartItemCount = cart.items.reduce((total, item) => total + item.quantity, 0);
+
+  useEffect(() => {
+    if (page !== paginated.currentPage) {
+      setPage(paginated.currentPage);
+    }
+  }, [page, paginated.currentPage]);
 
   function addProduct(productId: string) {
     setCart((current) => addCartItem(current, productId));
@@ -424,7 +430,7 @@ export function PublicStorefrontExperience({
               <button
                 className="rounded-md border border-[var(--storefront-border)] bg-[var(--storefront-surface)] px-4 py-2 text-sm font-black disabled:cursor-not-allowed disabled:opacity-45"
                 disabled={paginated.currentPage === 1}
-                onClick={() => setPage((current) => Math.max(1, current - 1))}
+                onClick={() => setPage(Math.max(1, paginated.currentPage - 1))}
                 type="button"
               >
                 Previous
@@ -432,7 +438,7 @@ export function PublicStorefrontExperience({
               <button
                 className="rounded-md border border-[var(--storefront-border)] bg-[var(--storefront-surface)] px-4 py-2 text-sm font-black disabled:cursor-not-allowed disabled:opacity-45"
                 disabled={paginated.currentPage === paginated.pageCount}
-                onClick={() => setPage((current) => Math.min(paginated.pageCount, current + 1))}
+                onClick={() => setPage(Math.min(paginated.pageCount, paginated.currentPage + 1))}
                 type="button"
               >
                 Next

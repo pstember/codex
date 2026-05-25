@@ -42,6 +42,16 @@ describe("public storefront catalog", () => {
     expect(firstPage.totalProducts).toBe(products.length);
   });
 
+  it("normalizes invalid pagination inputs before slicing products", () => {
+    const invalidPage = paginateStorefrontCatalog(products, Number.NaN);
+    const invalidPageSize = paginateStorefrontCatalog(products, 1, 0);
+
+    expect(invalidPage.currentPage).toBe(1);
+    expect(invalidPage.products).toEqual(products.slice(0, storefrontCatalogPageSize));
+    expect(invalidPageSize.pageCount).toBe(Math.ceil(products.length / storefrontCatalogPageSize));
+    expect(invalidPageSize.products).toHaveLength(storefrontCatalogPageSize);
+  });
+
   it("exposes sorted seeded categories for the storefront filters", () => {
     const categories = getStorefrontCategories(products);
 
