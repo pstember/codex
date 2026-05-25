@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-label="Atlas and Co. basic theme hero shot">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f9fbff"/>
+      <stop offset="55%" stop-color="#eef5ff"/>
+      <stop offset="100%" stop-color="#e0ecff"/>
+    </linearGradient>
+    <linearGradient id="shadow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0b1020" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#0b1020" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f3f7ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="720" fill="url(#bg)"/>
+  <circle cx="1010" cy="132" r="124" fill="#bfdbfe" opacity="0.65"/>
+  <circle cx="925" cy="598" r="170" fill="#dbeafe" opacity="0.9"/>
+  <path d="M98 560c188-72 382-112 584-118 155-5 286 12 420 63v139H98Z" fill="#dfeaff"/>
+  <ellipse cx="780" cy="558" rx="280" ry="54" fill="url(#shadow)"/>
+  <g transform="translate(510 182)">
+    <rect x="0" y="0" width="332" height="252" rx="28" fill="url(#card)"/>
+    <rect x="24" y="26" width="284" height="204" rx="22" fill="#ffffff"/>
+    <rect x="42" y="48" width="126" height="134" rx="22" fill="#eff6ff"/>
+    <rect x="182" y="56" width="96" height="18" rx="9" fill="#2563eb" opacity="0.9"/>
+    <rect x="182" y="90" width="88" height="16" rx="8" fill="#93c5fd"/>
+    <rect x="182" y="122" width="76" height="16" rx="8" fill="#bfdbfe"/>
+    <rect x="182" y="156" width="108" height="48" rx="16" fill="#0b1020"/>
+    <rect x="82" y="72" width="44" height="86" rx="18" fill="#1d4ed8"/>
+    <rect x="72" y="56" width="62" height="18" rx="9" fill="#60a5fa"/>
+    <path d="M96 74h16c9 0 16 7 16 16v48c0 9-7 16-16 16H96Z" fill="#dbeafe"/>
+  </g>
+  <g transform="translate(826 300)">
+    <rect x="0" y="12" width="124" height="176" rx="28" fill="#fff7ed"/>
+    <rect x="18" y="0" width="88" height="28" rx="14" fill="#f59e0b"/>
+    <rect x="24" y="52" width="76" height="20" rx="10" fill="#fdba74"/>
+    <rect x="24" y="84" width="64" height="20" rx="10" fill="#fed7aa"/>
+    <rect x="24" y="116" width="52" height="20" rx="10" fill="#ffedd5"/>
+  </g>
+  <g transform="translate(620 430)">
+    <ellipse cx="50" cy="94" rx="58" ry="16" fill="#0b1020" fill-opacity="0.14"/>
+    <rect x="24" y="18" width="52" height="76" rx="16" fill="#ffffff"/>
+    <path d="M18 44h62a20 20 0 0 1 0 40H18Z" fill="#dbeafe"/>
+    <path d="M76 40c26 0 46 18 46 40s-20 40-46 40" fill="none" stroke="#1d4ed8" stroke-width="12" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(432 438)">
+    <ellipse cx="76" cy="78" rx="90" ry="20" fill="#0b1020" fill-opacity="0.12"/>
+    <rect x="0" y="32" width="152" height="58" rx="24" fill="#ffffff"/>
+    <rect x="18" y="48" width="54" height="26" rx="13" fill="#dbeafe"/>
+    <rect x="82" y="48" width="50" height="26" rx="13" fill="#bfdbfe"/>
+    <circle cx="124" cy="22" r="20" fill="#0b1020"/>
+    <rect x="118" y="4" width="12" height="24" rx="6" fill="#0b1020"/>
+    <rect x="112" y="0" width="24" height="10" rx="5" fill="#38bdf8"/>
+  </g>
+</svg>

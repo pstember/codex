@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-label="Father's Day outdoor gifting scene">
+  <rect width="1200" height="720" fill="#fff7ed"/>
+  <rect x="86" y="88" width="1028" height="544" rx="34" fill="#b45309" opacity="0.14"/>
+  <circle cx="318" cy="370" r="132" fill="#292524"/>
+  <circle cx="318" cy="370" r="86" fill="#fdba74"/>
+  <rect x="574" y="178" width="246" height="326" rx="30" fill="#ffffff"/>
+  <rect x="614" y="220" width="166" height="62" rx="16" fill="#b45309" opacity="0.84"/>
+  <rect x="614" y="318" width="166" height="34" rx="12" fill="#92400e" opacity="0.42"/>
+  <rect x="614" y="376" width="118" height="34" rx="12" fill="#92400e" opacity="0.24"/>
+  <rect x="824" y="316" width="192" height="118" rx="24" fill="#451a03" opacity="0.9"/>
+  <path d="M856 316h128c0-46-28-82-64-82s-64 36-64 82z" fill="#f97316" opacity="0.62"/>
+  <rect x="202" y="504" width="262" height="46" rx="18" fill="#78350f" opacity="0.5"/>
+</svg>

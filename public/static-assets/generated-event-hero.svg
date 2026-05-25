@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-label="Generated seasonal Atlas and Co. storefront hero">
+  <rect width="1200" height="720" fill="#12091f"/>
+  <path d="M0 560 C180 470 320 520 480 430 C650 332 772 360 934 260 C1042 194 1132 164 1200 150 L1200 720 L0 720 Z" fill="#f97316" opacity="0.72"/>
+  <path d="M82 106 L430 70 L522 292 L298 462 L86 352 Z" fill="#a3e635" opacity="0.24"/>
+  <path d="M730 112 L1070 178 L1002 520 L642 488 Z" fill="#22d3ee" opacity="0.22"/>
+  <rect x="174" y="390" width="852" height="128" rx="28" fill="#fff7ed"/>
+  <rect x="258" y="262" width="186" height="160" rx="24" fill="#f97316"/>
+  <rect x="332" y="262" width="34" height="160" fill="#fff7ed" opacity="0.84"/>
+  <rect x="258" y="326" width="186" height="32" fill="#fff7ed" opacity="0.84"/>
+  <rect x="508" y="220" width="226" height="202" rx="24" fill="#a3e635"/>
+  <rect x="600" y="220" width="40" height="202" fill="#12091f" opacity="0.78"/>
+  <rect x="508" y="302" width="226" height="38" fill="#12091f" opacity="0.78"/>
+  <rect x="796" y="304" width="152" height="118" rx="22" fill="#22d3ee"/>
+  <circle cx="230" cy="190" r="34" fill="#f97316" opacity="0.48"/>
+  <circle cx="918" cy="222" r="46" fill="#a3e635" opacity="0.34"/>
+  <circle cx="1010" cy="310" r="24" fill="#22d3ee" opacity="0.46"/>
+</svg>
