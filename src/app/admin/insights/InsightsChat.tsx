@@ -3,6 +3,7 @@
 import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from "react";
 import type { InsightChatState } from "@/app/admin/insights/actions";
 import { AdminObservabilityRail } from "@/app/components/AdminObservabilityRail";
+import { CodexGenerationAnimation } from "@/app/components/CodexGenerationAnimation";
 import type {
   CommerceMetricId,
   MetricDashboard,
@@ -210,7 +211,14 @@ export function InsightsChat({ dataCatalog }: { dataCatalog: SourceDataCatalog }
             className="min-h-32 rounded-md border border-[#223b78]/15 bg-white p-5 shadow-[0_18px_60px_rgba(8,13,31,0.10)]"
           >
             <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#2563eb]">Response</p>
-            {state.error ? (
+            {isPending ? (
+              <div className="mt-3">
+                <CodexGenerationAnimation
+                  detail="Codex is planning the GraphQL, checking the evidence, and preparing the answer."
+                  label="Codex is generating an insight"
+                />
+              </div>
+            ) : state.error ? (
               <p className="mt-3 text-sm leading-6 text-[#be123c]">{state.error}</p>
             ) : (
               <p className="mt-3 whitespace-pre-wrap text-base leading-7 text-[#14213d]">
@@ -246,7 +254,7 @@ export function InsightsChat({ dataCatalog }: { dataCatalog: SourceDataCatalog }
         title="Codex exchange"
       >
         <RecentRunsPanel onRevisitRun={revisitRun} runs={recentRuns} />
-        <TraceTimeline events={traceEvents} />
+        <TraceTimeline events={traceEvents} isPending={isPending} />
       </AdminObservabilityRail>
     </div>
   );
@@ -1026,7 +1034,7 @@ function RecentRunsPanel({
   );
 }
 
-function TraceTimeline({ events }: { events: DataQuestionEvent[] }) {
+function TraceTimeline({ events, isPending }: { events: DataQuestionEvent[]; isPending: boolean }) {
   return (
     <section className="min-h-24 rounded-md border border-white/10 bg-white/[0.03] p-3">
       <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#22d3ee]">Live trace</p>
@@ -1060,9 +1068,19 @@ function TraceTimeline({ events }: { events: DataQuestionEvent[] }) {
           ))}
         </ol>
       ) : (
-        <p className="mt-3 text-sm leading-6 text-[#cbd5e1]">
-          Submit a data question to watch each exchange step populate here.
-        </p>
+        <div className="mt-3">
+          {isPending ? (
+            <CodexGenerationAnimation
+              detail="Trace events will appear here as soon as the run reports progress."
+              label="Codex is preparing the insight trace"
+              tone="dark"
+            />
+          ) : (
+            <p className="text-sm leading-6 text-[#cbd5e1]">
+              Submit a data question to watch each exchange step populate here.
+            </p>
+          )}
+        </div>
       )}
     </section>
   );
@@ -1146,7 +1164,7 @@ function DataTable({ table }: { table: SourceDataCatalog["tables"][number] }) {
         </div>
       </summary>
       <div className="min-w-0 border-t border-[#d7e0f4]">
-        <div className="max-h-[420px] max-w-full overflow-auto">
+        <div className="max-h-[420px] w-full min-w-0 overflow-auto [contain:inline-size]">
           <table className="w-max min-w-full border-separate border-spacing-0 text-left text-sm">
             <thead className="sticky top-0 z-10 bg-[#14213d] text-[#f8fbff]">
               <tr>

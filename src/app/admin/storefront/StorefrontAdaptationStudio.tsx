@@ -12,6 +12,7 @@ import {
   updateStorefrontPaletteAction,
 } from "@/app/admin/storefront/actions";
 import { AdminObservabilityRail } from "@/app/components/AdminObservabilityRail";
+import { CodexGenerationAnimation } from "@/app/components/CodexGenerationAnimation";
 import type { StorefrontConfig, StorefrontPalette } from "@/domain/storefront";
 import {
   describeStorefrontHeroImageComposition,
@@ -277,6 +278,13 @@ export function StorefrontAdaptationStudio({
                 >
                   {isPending ? "Generating..." : "Generate visual draft"}
                 </button>
+                {isPending ? (
+                  <CodexGenerationAnimation
+                    detail="Codex is shaping copy, palette, product placement, and hero-image metadata."
+                    label="Codex is generating a storefront design"
+                    tone="dark"
+                  />
+                ) : null}
                 {result ? (
                   <p className="text-sm font-semibold text-[#c7d2fe]">
                     {result.versionName}: {result.status}
@@ -921,9 +929,15 @@ function StorefrontTraceTimeline({
         ))
       ) : (
         <li className="rounded-md border border-white/10 bg-white/5 p-3 text-sm text-[#c7d2fe]">
-          {isPending
-            ? "Waiting for the first trace event..."
-            : "Run an adaptation to watch Codex work."}
+          {isPending ? (
+            <CodexGenerationAnimation
+              detail="Trace events will appear here as soon as the visual run reports progress."
+              label="Codex is preparing the storefront trace"
+              tone="dark"
+            />
+          ) : (
+            "Run an adaptation to watch Codex work."
+          )}
         </li>
       )}
     </ol>

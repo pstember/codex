@@ -21,6 +21,11 @@ h3 {
   font-family: var(--font-display);
 }
 
+.admin-shell {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
 .d20-stage {
   background:
     linear-gradient(115deg, rgba(34, 211, 238, 0.16), transparent 34%),
@@ -62,10 +67,18 @@ h3 {
 
 @media (min-width: 1024px) {
   html[data-admin-observability-state="open"] .admin-shell {
-    padding-right: 416px;
+    margin-left: 0;
+    margin-right: auto;
+    max-width: calc(100vw - 416px);
+    padding-right: 2rem;
+    width: calc(100vw - 416px);
   }
 
   html[data-admin-observability-state="closed"] .admin-shell {
-    padding-right: 72px;
+    margin-left: 0;
+    margin-right: auto;
+    max-width: calc(100vw - 72px);
+    padding-right: 2rem;
+    width: calc(100vw - 72px);
   }
 }

@@ -34,6 +34,8 @@ Insight at `/admin/insights` is the commerce analytics workspace.
 6. Codex writes a final answer using only that evidence.
 7. The observability rail shows prompt, response, validation, execution, and evidence steps.
 
+While Codex is working, Insight shows a compact generation animation in the response area and trace rail so staff can tell the run is still active.
+
 Good questions include product promotion, stock risk, return reasons, conversion outliers, customer segments, email performance, order dates, and stock positions.
 
 Unsupported questions should receive a scoped refusal rather than an invented answer.
@@ -50,6 +52,8 @@ Storefront Studio at `/admin/storefront` is the Operator workflow for event stor
 6. Staff can use `Preview for me` for a session-scoped private preview.
 7. A valid draft must be marked ready before it can be published.
 8. Publishing creates a new active published version and keeps prior versions available in version history.
+
+While Codex is working, Storefront Studio shows the shared generation animation near the draft controls and in the trace rail until run events arrive.
 
 The fixed storefront roles are:
 

@@ -26,9 +26,9 @@ export default async function InsightsPage() {
             <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#67e8f9]">
               Atlas prism bench
             </p>
-            <h1 className="mt-3 text-4xl font-black tracking-normal md:text-6xl">
-              Insight workbench
-            </h1>
+            <h2 className="mt-3 text-4xl font-black tracking-normal md:text-6xl">
+              Atlas data workbench
+            </h2>
             <p className="mt-4 max-w-2xl text-sm leading-6 text-[#dbeafe]">
               A working lab for asking open Atlas commerce questions through generated GraphQL,
               compact evidence, and live Codex traceability.

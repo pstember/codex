@@ -45,4 +45,6 @@ The tracked fixture DB should not contain sessions, generated drafts, local Code
 
 Playwright starts its own isolated server and database. Do not reuse a normal development server for e2e runs, because that can write smoke-test drafts into `.data/commerce.db`.
 
+The smoke specs run with one worker because they share the isolated demo server and exercise sign-in, logout, cart, and storefront preview state. Live Codex generation is covered with fake runners in Vitest rather than the browser smoke suite, so e2e does not require an authenticated Codex app server.
+
 If local browser launch is blocked by OS sandbox permissions, install or run Playwright with the required local permission and record that in the verification summary.
